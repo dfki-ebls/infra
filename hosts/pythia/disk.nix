@@ -1,5 +1,4 @@
-# ZFS mirror over two LUKS2 devices, unlocked by the TPM, with an ESP on each SSD,
-# so either one boots on its own. See README for installing and TPM enrollment.
+# ZFS mirror over both SSDs with an ESP on each, so either one boots on its own.
 { lib, ... }:
 let
   # Device placeholders, replace with the `/dev/disk/by-id` paths of the SSDs.
@@ -16,7 +15,7 @@ let
 in
 {
   disko.devices = {
-    disk = lib.mapAttrs (name: disk: {
+    disk = lib.mapAttrs (_: disk: {
       type = "disk";
       inherit (disk) device;
       content = {
@@ -35,21 +34,11 @@ in
               ];
             };
           };
-          luks = {
+          zfs = {
             size = "100%";
             content = {
-              type = "luks";
-              name = "crypt-${name}";
-              # dm-crypt's workqueues only add latency on SSDs.
-              settings = {
-                allowDiscards = true;
-                bypassWorkqueues = true;
-                crypttabExtraOpts = [ "tpm2-device=auto" ];
-              };
-              content = {
-                type = "zfs";
-                pool = "zroot";
-              };
+              type = "zfs";
+              pool = "zroot";
             };
           };
         };
@@ -96,10 +85,6 @@ in
       devices = [ "nodev" ];
     }) disks;
   };
-
-  # Waits for both devices to be unlocked, also through a passphrase prompt,
-  # while a missing one fails after its timeout and the pool imports degraded.
-  boot.initrd.systemd.services.zfs-import-zroot.after = [ "cryptsetup.target" ];
 
   networking.hostId = "8b7dcd7e";
   services.zfs.autoScrub.enable = true;

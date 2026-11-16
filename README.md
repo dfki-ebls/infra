@@ -232,13 +232,9 @@ ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, 
 
 ### Disks
 
-The two SSDs each hold an ESP and a LUKS2 device, which form a ZFS mirror (`hosts/pythia/disk.nix`).
+The two SSDs each hold an ESP and a ZFS partition, which form a mirror (`hosts/pythia/disk.nix`).
 GRUB installs itself into both ESPs, with a firmware boot entry for each, so either SSD boots on its own.
-If one fails, the initrd gives up on it after the device timeout and imports the pool degraded, without manual intervention.
-
-The TPM unlocks both LUKS devices, bound to PCR 7, the Secure Boot state.
-Without Secure Boot, this protects SSDs that leave the machine, such as returned or discarded ones, but not the machine as a whole.
-The passphrase stays as a fallback, entered on the A400's console, for instance after a firmware update cleared the firmware TPM.
+If one fails, the initrd waits for it briefly and then imports the pool degraded, without manual intervention.
 
 ### Installation
 
@@ -251,38 +247,25 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/<usb> bs=4M status=progress oflag=sync
 
 Boot pythia from it and connect with `ssh root@<ip>`.
 Replace the placeholder disk paths in `hosts/pythia/disk.nix` with the SSDs' entries in `/dev/disk/by-id`.
-Then partition, format, and install, entering the LUKS passphrase when asked:
+Then partition, format, and install:
 
 ```bash
 sudo nix run github:nix-community/disko/latest -- --mode destroy,format,mount --flake github:dfki-ebls/infra#pythia
 sudo nixos-install --flake github:dfki-ebls/infra#pythia --no-root-passwd
 ```
 
-After the first boot, enroll the TPM for both devices:
-
-```bash
-for device in /dev/disk/by-partlabel/disk-{a,b}-luks; do
-  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 "$device"
-done
-```
-
-Re-enroll the same way after the TPM was cleared, adding `--wipe-slot=tpm2`.
-
-Finally, replace the GPU placeholders in `hosts/pythia/vllm.nix` with the card's UUID from `nvidia-smi -L` and its device node `/dev/nvidia<minor>`, whose minor number `nvidia-smi -q` lists.
+After the first boot, replace the GPU placeholders in `hosts/pythia/vllm.nix` with the card's UUID from `nvidia-smi -L` and its device node `/dev/nvidia<minor>`, whose minor number `nvidia-smi -q` lists.
 
 ### Disk replacement
 
 Copy the partition table of the remaining SSD (`/dev/disk/by-id/<old>`) to the new one (`/dev/disk/by-id/<new>`) with fresh GUIDs, which keeps the partition labels the configuration refers to.
-Then format and open the LUKS device, replace the missing mirror half, enroll the TPM, and reinstall the bootloader into both ESPs:
+Then replace the missing mirror half and reinstall the bootloader into both ESPs:
 
 ```bash
 sudo sgdisk --replicate=/dev/disk/by-id/<new> /dev/disk/by-id/<old>
 sudo sgdisk --randomize-guids /dev/disk/by-id/<new>
 sudo mkfs.vfat /dev/disk/by-partlabel/disk-b-ESP
-sudo cryptsetup luksFormat /dev/disk/by-partlabel/disk-b-luks
-sudo cryptsetup open /dev/disk/by-partlabel/disk-b-luks crypt-b
-sudo zpool replace zroot <missing-vdev> /dev/mapper/crypt-b
-sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/disk-b-luks
+sudo zpool replace zroot <missing-vdev> /dev/disk/by-partlabel/disk-b-zfs
 sudo mount /boot-fallback && sudo nixos-rebuild boot --install-bootloader
 ```
 
@@ -302,7 +285,7 @@ systemctl restart llmhop
 cat /etc/credstore/llmhop.token.<client>
 ```
 
-To keep a token encrypted at rest with the host key, and the TPM, write it to `/etc/credstore.encrypted` instead:
+To keep a token encrypted at rest with the host key, and the TPM if present, write it to `/etc/credstore.encrypted` instead:
 
 ```bash
 openssl rand -hex 32 | systemd-creds encrypt --name=llmhop.token.<client> - /etc/credstore.encrypted/llmhop.token.<client>
