@@ -3,25 +3,23 @@
   pkgs,
   lib,
   inputs,
-  caddyHelpers,
   ...
 }:
+let
+  # Production serves the website at raise.dfki.de.
+  production = config.custom.rootDomain == "raise.dfki.dev";
+in
 {
   services.caddy.virtualHosts = {
-    websiteAlias = lib.mkIf (config.custom.rootDomain == "raise.dfki.dev") {
-      hostName = caddyHelpers.mkHost "raise.dfki.dev";
+    websiteAlias = lib.mkIf production {
+      domain = config.custom.rootDomain;
       extraConfig = ''
-        ${caddyHelpers.securityHeaders { }}
         redir https://raise.dfki.de{uri}
       '';
     };
     website = {
-      # Production uses raise.dfki.de.
-      hostName = caddyHelpers.mkHost (
-        if config.custom.rootDomain == "raise.dfki.dev" then "raise.dfki.de" else config.custom.rootDomain
-      );
+      domain = if production then "raise.dfki.de" else config.custom.rootDomain;
       extraConfig = ''
-        ${caddyHelpers.securityHeaders { }}
         root * ${inputs.website.packages.${pkgs.stdenv.system}.default}
         encode zstd gzip
 

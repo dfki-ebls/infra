@@ -1,24 +1,33 @@
 {
   config,
   lib,
-  caddyHelpers,
   ...
 }:
 let
   cfg = config.custom.rauthy;
 
-  caddySubHost = caddyHelpers.mkSubHost "sso";
-  hivegentSubHost = caddyHelpers.mkSubHost "hivegent";
-  pubUrl = "sso.${config.custom.rootDomain}";
-  pubOrigin = caddyHelpers.mkSubUrl "sso";
+  vhosts = config.services.caddy.virtualHosts;
+  pubUrl = vhosts.rauthy.domain;
+  pubOrigin = vhosts.rauthy.url;
 
   port = 8080;
+  mail = "raise@wi2.uni-trier.de";
+
+  credential = "rauthy.secrets";
+  fromSecrets = "$SECRETS";
+  rauthy = lib.getExe cfg.package;
 in
 {
+  # Rauthy's own generators print the `[cluster]` and `[encryption]` tables.
+  custom.credstore.${credential} = "${rauthy} generate-secrets && ${rauthy} generate-enc-key";
+
   custom.rauthy = {
     enable = true;
     origin = pubOrigin;
     postgresql.createLocally = true;
+    secretsCredential = credential;
+    # `SMTP_PASSWORD`, see README.
+    environmentFile = "/etc/rauthy/rauthy.env";
 
     settings = {
       bootstrap = {
@@ -35,6 +44,13 @@ in
         # https://sebadob.github.io/rauthy/config/ha.html
         node_id = 1;
         nodes = [ "1 localhost:8100 localhost:8200" ];
+        secret_raft = fromSecrets;
+        secret_api = fromSecrets;
+      };
+
+      encryption = {
+        keys = [ fromSecrets ];
+        key_active = fromSecrets;
       };
 
       server = {
@@ -58,7 +74,17 @@ in
 
       user_registration.enable = false;
 
-      email.rauthy_admin_email = config.custom.admin.mail;
+      # SMTP via the uni Trier relay. Port 465 (implicit TLS/SSL) maps to
+      # Rauthy's default connection mode, which builds a lettre `relay()`
+      # transport over TLS. https://sebadob.github.io/rauthy/config/config.html
+      email = {
+        rauthy_admin_email = config.custom.admin.mail;
+        smtp_url = "mail.wi2.uni-trier.de";
+        smtp_port = 465;
+        smtp_username = mail;
+        smtp_from = "RAISE Single Sign-On <${mail}>";
+        sub_prefix = "RAISE Single Sign-On";
+      };
 
       events.email = config.custom.admin.mail;
 
@@ -66,13 +92,14 @@ in
     };
   };
 
-  services.caddy.virtualHosts.rauthy = lib.mkIf cfg.enable {
-    hostName = caddySubHost;
+  services.caddy.virtualHosts.rauthy = {
+    subdomain = "sso";
+    vpnOnly = true;
+    geoblock = true;
+    # oidc-spa restores sessions through a hidden authorization iframe, so
+    # Rauthy must allow the Hivegent SPA origin to frame auth responses.
+    securityHeaders.frameAncestors = [ vhosts.hivegent.address ];
     extraConfig = ''
-      ${caddyHelpers.mkGeoblock { }}
-      # oidc-spa restores sessions through a hidden authorization iframe, so
-      # Rauthy must allow the Hivegent SPA origin to frame auth responses.
-      ${caddyHelpers.securityHeaders { frameAncestors = [ hivegentSubHost ]; }}
       reverse_proxy 127.0.0.1:${toString port}
     '';
   };
@@ -80,7 +107,7 @@ in
   # Split-horizon for local relying parties such as Hivegent, which is confined
   # to loopback and passes the VPN allowlist there, so the public issuer
   # resolves to this host's Caddy, keeping URL and TLS name.
-  networking.hosts = lib.mkIf cfg.enable {
+  networking.hosts = {
     "127.0.0.1" = [ pubUrl ];
     "::1" = [ pubUrl ];
   };

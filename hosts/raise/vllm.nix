@@ -17,7 +17,9 @@ let
 in
 lib.mkIf config.custom.enableNvidia {
   # llmhop grants it to every workload with a `watermark`.
-  custom.credstore."vllm.watermark-key" = "od -An -N8 -tu8 /dev/urandom | tr -d ' '";
+  # An unsigned 64-bit integer, as vLLM requires.
+  custom.credstore."vllm.watermark-key" =
+    ''printf '%u' "0x$(${lib.getExe pkgs.openssl} rand -hex 8)"'';
 
   services.llmhop.vllm = {
     enable = true;

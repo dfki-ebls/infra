@@ -2,12 +2,11 @@
   lib,
   config,
   pkgs,
-  caddyHelpers,
   ...
 }:
 let
-  caddySubHost = caddyHelpers.mkSubHost "hivegent";
-  hivegentUrl = caddyHelpers.mkSubUrl "hivegent";
+  vhost = config.services.caddy.virtualHosts.hivegent;
+  hivegentUrl = vhost.url;
   inherit (config.custom.rauthy) issuer origin;
 
   # Every OIDC client whose tokens the API accepts, matched exactly, since a
@@ -41,18 +40,18 @@ let
   llmhopListener = config.services.llmhop.gateway.llmhop.listen.default;
   inherit (config.services.llmhop.vllm) detectors;
   withTransparency = lib.mkIf (detectors ? watermark);
+  withLlmhop = lib.mkIf config.services.llmhop.gateway.active;
   openssl = lib.getExe pkgs.openssl;
 
-  # Web search through a local SearXNG and fetching of the pages it or the
-  # user names, off until the shared instance should reach the web.
-  withWeb = lib.mkIf false;
+  # Web search and fetching follow the local SearXNG below.
+  withWeb = lib.mkIf config.services.searx.enable;
 in
 {
   services.hivegent = {
     enable = true;
 
     postgresql.createLocally = true;
-    searxng.createLocally = withWeb true;
+    searxng.createLocally = config.services.searx.enable;
 
     # Every endpoint is local (Rauthy via split-horizon, llmhop and Postgres
     # via unix sockets), so confine the backend to loopback.
@@ -62,9 +61,8 @@ in
     # the model-based chunkers, docling) is decided centrally by the process
     # environment rather than per-library config — the backend uses `auto`
     # detection everywhere. Hide the GPU for now so the whole VRAM budget
-    # stays with the llama-server; `auto` then resolves to CPU for all of
-    # them. Drop this together with `PrivateDevices` below once there is
-    # GPU headroom to offload onto.
+    # stays with vLLM; `auto` then resolves to CPU for all of them. Drop this
+    # together with `PrivateDevices` below once the model moved to pythia.
     environment.CUDA_VISIBLE_DEVICES = "";
 
     settings = {
@@ -120,7 +118,7 @@ in
       network = {
         # Advertised in web_fetch's User-Agent for traffic questions.
         contact_email = config.custom.admin.mail;
-        unix_sockets.llmhop = llmhopListener.socket;
+        unix_sockets = withLlmhop { llmhop = llmhopListener.socket; };
       };
 
       transparency = withTransparency {
@@ -132,15 +130,12 @@ in
 
     caddy = {
       enable = true;
-      hostName = caddySubHost;
+      hostName = vhost.address;
       hsts = config.custom.enableCertificates;
       # The SPA reads its OIDC config from the backend's `/api/v1/config`
       # (`settings.auth` above), so there is no per-deployment frontend build.
       # Site-wide hardening the reusable module intentionally leaves out.
       extraConfig = ''
-        ${caddyHelpers.mkGeoblock { }}
-        ${caddyHelpers.scannerHoneypots}
-
         @csp_api path /api/*
         header @csp_api {
           defer
@@ -167,8 +162,10 @@ in
     })
   ];
 
-  services.searx = withWeb {
-    enable = true;
+  # Web search through a local SearXNG and fetching of the pages it or the
+  # user names, off until the shared instance should reach the web.
+  services.searx = {
+    enable = false;
     settings = {
       # Substituted by searx-init when it renders the settings.
       server.secret_key = "$SEARX_SECRET_KEY";
@@ -217,6 +214,15 @@ in
     }
   ];
 
+  # The module's site body brings its own security headers.
+  services.caddy.virtualHosts.hivegent = {
+    subdomain = "hivegent";
+    vpnOnly = true;
+    geoblock = true;
+    scannerHoneypots = true;
+    securityHeaders.enable = false;
+  };
+
   systemd.services.hivegent = {
     # Discovery from the public issuer goes through Caddy to Rauthy at startup.
     # Ordering only, since Caddy restarts on every vhost change here and a
@@ -228,7 +234,7 @@ in
 
     serviceConfig = {
       # Grants the dynamic user access to llmhop's socket.
-      SupplementaryGroups = [ llmhopListener.socketGroup ];
+      SupplementaryGroups = withLlmhop [ llmhopListener.socketGroup ];
       # The module exposes the host devices for CUDA, which is hidden above.
       PrivateDevices = lib.mkForce true;
     };

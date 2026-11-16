@@ -1,19 +1,20 @@
-{ config, ... }:
+{ config, pkgs, ... }:
+let
+  admin = config.custom.admin;
+in
 {
   users = {
+    mutableUsers = false;
+    defaultUserShell = pkgs.fish;
     users = {
-      mlenz = {
-        description = config.custom.admin.name;
-        uid = 1000;
+      ${admin.login} = {
+        inherit (admin) uid;
+        description = admin.name;
         isNormalUser = true;
-        group = "mlenz";
+        group = admin.login;
         extraGroups = [ "wheel" ];
         # no password set, authentication only via rssh
-        openssh.authorizedKeys.keys = [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFT0P6ZLB5QOtEdpPHCF0frL3WJEQQGEpMf2r010gYH3 mlenz@macbook"
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPg/jZmSr0LiCm5FKAcF54UJXK8GNgDO4op0MiASNadb mlenz@iphone"
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHTD8HTidTJM3RLmU+WW7tBlDz6L2x8zoHJhqzA6m3+B mlenz@1password"
-        ];
+        openssh.authorizedKeys.keys = admin.sshKeys;
       };
       isg-tr = {
         description = "ISG Trier";
@@ -26,10 +27,8 @@
       };
     };
     groups = {
-      mlenz.gid = config.users.users.mlenz.uid;
+      ${admin.login}.gid = admin.uid;
       isg-tr.gid = config.users.users.isg-tr.uid;
     };
   };
-
-  virtualisation.vmVariant.users.users.mlenz.password = "";
 }

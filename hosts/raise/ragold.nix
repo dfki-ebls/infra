@@ -2,7 +2,6 @@
   config,
   pkgs,
   inputs,
-  caddyHelpers,
   ...
 }:
 let
@@ -14,12 +13,11 @@ let
 in
 {
   # Lets users transfer a Hivegent reply to RAGold as a gold benchmark entry.
-  services.hivegent.settings.ragold.url = caddyHelpers.mkSubUrl "ragold";
+  services.hivegent.settings.ragold.url = config.services.caddy.virtualHosts.ragold.url;
 
   services.caddy.virtualHosts.ragold = {
-    hostName = caddyHelpers.mkSubHost "ragold";
+    subdomain = "ragold";
     extraConfig = ''
-      ${caddyHelpers.securityHeaders { }}
       root * ${ragold}
       encode zstd gzip
 

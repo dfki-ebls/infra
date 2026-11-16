@@ -11,20 +11,26 @@ let
     else
       pattern == name;
 
+  # Every imported name or glob with its unit, collected once.
+  imports = lib.concatLists (
+    lib.mapAttrsToList (
+      unit: service:
+      map (pattern: {
+        inherit pattern;
+        unit = "${unit}.service";
+      }) (lib.toList (service.serviceConfig.ImportCredential or [ ]))
+    ) config.systemd.services
+  );
+
   consumers = lib.mapAttrs (
-    name: _:
-    lib.mapAttrsToList (unit: _: "${unit}.service") (
-      lib.filterAttrs (
-        _: service: lib.any (matches name) (lib.toList (service.serviceConfig.ImportCredential or [ ]))
-      ) config.systemd.services
-    )
+    name: _: lib.unique (map (i: i.unit) (lib.filter (i: matches name i.pattern) imports))
   ) config.custom.credstore;
 in
 {
   options.custom.credstore = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
-    example."vllm.watermark-key" = "od -An -N8 -tu8 /dev/urandom | tr -d ' '";
+    example = lib.literalExpression ''{ "searx.secret-key" = "''${lib.getExe pkgs.openssl} rand -hex 32"; }'';
     description = ''
       Credentials generated into `${credstore}` if missing, keyed by name,
       with the shell command printing the secret as value. Each is generated

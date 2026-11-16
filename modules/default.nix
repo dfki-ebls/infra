@@ -2,14 +2,11 @@
 {
   imports = [
     inputs.determinate.nixosModules.default
-    inputs.llmhop.nixosModules.default
-    inputs.hivegent.nixosModules.default
   ]
   ++ lib'.flocken.getModules ./.;
 
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = "Europe/Berlin";
-  system.stateVersion = "26.05";
   documentation.man.cache.enable = false;
   hardware.enableAllFirmware = true;
 
@@ -26,11 +23,7 @@
     variables.BROWSER = "echo";
   };
 
-  boot.loader = {
-    systemd-boot.configurationLimit = 10;
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-  };
+  boot.loader.efi.canTouchEfiVariables = true;
 
   zramSwap = {
     enable = true;
