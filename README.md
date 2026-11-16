@@ -220,7 +220,7 @@ Rotate the secret from the same admin UI screen; nothing in the Nix store needs 
 
 ## pythia
 
-raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.dev` with the `hivegent` client token.
+raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with the `hivegent` client token.
 
 ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, two RTX PRO 6000 Blackwell cards for inference and an RTX A400 for the maintenance display.
 
@@ -266,10 +266,20 @@ sudo mount /boot-fallback && sudo nixos-rebuild boot --install-bootloader
 Swap `a` and `b` if the first SSD failed, and take `<missing-vdev>` from `zpool status`.
 Update the disk path in `hosts/pythia/disk.nix` afterwards.
 
+### Certificate
+
+Caddy serves the certificate files `/etc/credstore/caddy.tls.cert`, holding the full chain, and `/etc/credstore/caddy.tls.key`, which only root can read.
+Install a new certificate, also when renewing, then restart Caddy:
+
+```bash
+sudo install -m 600 pythia.crt /etc/credstore/caddy.tls.cert
+sudo install -m 600 pythia.key /etc/credstore/caddy.tls.key
+sudo systemctl restart caddy
+```
+
 ### Clients
 
-Caddy serves llmhop's models over TLS at `https://pythia.dfki.dev` (`hosts/pythia/llmhop.nix`), proxying to llmhop's unix socket, and each client authenticates with its own bearer token.
-Caddy obtains the certificate through ACME, which needs the DNS record of `pythia.dfki.dev` and ports 80 and 443 reachable from the internet.
+Caddy serves llmhop's models over TLS at `https://pythia.dfki.uni-trier.de` (`hosts/pythia/llmhop.nix`), proxying to llmhop's unix socket, and each client authenticates with its own bearer token.
 Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, read when llmhop starts, and its sockets hold new connections while it restarts.
 The tokens of the clients listed in `clients` are generated before llmhop first starts, while any other one is added by hand:
 
