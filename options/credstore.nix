@@ -1,7 +1,6 @@
 { config, lib, ... }:
 let
   credstore = "/etc/credstore";
-  encrypted = "/etc/credstore.encrypted";
 
   # systemd accepts `*` only as the last character of an imported name.
   matches =
@@ -34,8 +33,7 @@ in
     description = ''
       Credentials generated into `${credstore}` if missing, keyed by name,
       with the shell command printing the secret as value. Each is generated
-      before every service importing it and never overwritten, also not while
-      it exists in `${encrypted}`.
+      before every service importing it and never overwritten.
     '';
   };
 
@@ -51,10 +49,7 @@ in
         description = "Generate credential ${name} if missing";
         requiredBy = consumers.${name};
         before = consumers.${name};
-        unitConfig.ConditionPathExists = [
-          "!${credstore}/${name}"
-          "!${encrypted}/${name}"
-        ];
+        unitConfig.ConditionPathExists = "!${credstore}/${name}";
         serviceConfig = {
           Type = "oneshot";
           UMask = "0077";

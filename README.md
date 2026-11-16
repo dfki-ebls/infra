@@ -104,12 +104,6 @@ List the credentials the unit receives, without printing their values:
 systemd-run --pipe --wait --quiet --property=ImportCredential='hivegent.*' systemd-creds list
 ```
 
-To keep a secret encrypted at rest with the host key, and the TPM if present, write it to `/etc/credstore.encrypted` instead:
-
-```bash
-systemd-ask-password -n "MCP client secret:" | systemd-creds encrypt --name=hivegent.MCP__CLIENT_SECRET - /etc/credstore.encrypted/hivegent.MCP__CLIENT_SECRET
-```
-
 Remove a secret by deleting its file and restarting.
 
 #### Hardening
@@ -285,16 +279,7 @@ systemctl restart llmhop
 cat /etc/credstore/llmhop.token.<client>
 ```
 
-To keep a token encrypted at rest with the host key, and the TPM if present, write it to `/etc/credstore.encrypted` instead:
-
-```bash
-openssl rand -hex 32 | systemd-creds encrypt --name=llmhop.token.<client> - /etc/credstore.encrypted/llmhop.token.<client>
-systemctl restart llmhop
-systemd-creds decrypt /etc/credstore.encrypted/llmhop.token.<client>
-```
-
 Rotate a token by replacing its file, and revoke it by deleting the file, each followed by a restart.
-A token that fails to decrypt is skipped, which locks out its client instead of opening the gateway.
 Without any token, llmhop rejects every request rather than serving it unauthenticated.
 
 ### Watermarking
