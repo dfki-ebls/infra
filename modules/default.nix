@@ -2,13 +2,13 @@
 {
   imports = [
     inputs.determinate.nixosModules.default
+    inputs.disko.nixosModules.default
   ]
   ++ lib'.flocken.getModules ./.;
 
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = "Europe/Berlin";
   documentation.man.cache.enable = false;
-  hardware.enableAllFirmware = true;
 
   security = {
     lockKernelModules = true;
