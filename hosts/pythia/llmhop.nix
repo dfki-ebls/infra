@@ -1,9 +1,4 @@
-{
-  lib,
-  config,
-  pkgs,
-  ...
-}:
+{ lib, config, ... }:
 let
   gateway = config.services.llmhop.gateway.llmhop;
   # Every credential with this prefix is a client token, see README.
@@ -37,7 +32,7 @@ in
 
   custom.credstore = lib.mkIf config.services.llmhop.gateway.active (
     lib.genAttrs' clients (
-      client: lib.nameValuePair "${prefix}${client}" "${lib.getExe pkgs.openssl} rand -hex 32"
+      client: lib.nameValuePair "${prefix}${client}" "od -An -N32 -tx1 /dev/urandom | tr -d ' \\n'"
     )
   );
 }

@@ -274,7 +274,7 @@ Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, r
 The tokens of the clients listed in `clients` are generated before llmhop first starts, while any other one is added by hand:
 
 ```bash
-(umask 077; openssl rand -hex 32 > /etc/credstore/llmhop.token.<client>)
+(umask 077; od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /etc/credstore/llmhop.token.<client>)
 systemctl restart llmhop
 cat /etc/credstore/llmhop.token.<client>
 ```

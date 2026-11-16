@@ -29,7 +29,7 @@ in
   options.custom.credstore = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
-    example = lib.literalExpression ''{ "searx.secret-key" = "''${lib.getExe pkgs.openssl} rand -hex 32"; }'';
+    example."searx.secret-key" = "od -An -N32 -tx1 /dev/urandom | tr -d ' \\n'";
     description = ''
       Credentials generated into `${credstore}` if missing, keyed by name,
       with the shell command printing the secret as value. Each is generated

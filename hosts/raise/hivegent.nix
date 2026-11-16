@@ -1,9 +1,4 @@
-{
-  lib,
-  config,
-  pkgs,
-  ...
-}:
+{ lib, config, ... }:
 let
   vhost = config.services.caddy.virtualHosts.hivegent;
   hivegentUrl = vhost.url;
@@ -41,7 +36,8 @@ let
   inherit (config.services.llmhop.vllm) detectors;
   withTransparency = lib.mkIf (detectors ? watermark);
   withLlmhop = lib.mkIf config.services.llmhop.gateway.active;
-  openssl = lib.getExe pkgs.openssl;
+  # 32 random bytes in hex.
+  secret = "od -An -N32 -tx1 /dev/urandom | tr -d ' \\n'";
 
   # Web search and fetching follow the local SearXNG below.
   withWeb = lib.mkIf config.services.searx.enable;
@@ -155,10 +151,10 @@ in
 
   custom.credstore = lib.mkMerge [
     (withTransparency {
-      "hivegent.TRANSPARENCY__SECRET_KEY" = "${openssl} rand -base64 32";
+      "hivegent.TRANSPARENCY__SECRET_KEY" = secret;
     })
     (withWeb {
-      "searx.secret-key" = "${openssl} rand -hex 32";
+      "searx.secret-key" = secret;
     })
   ];
 
