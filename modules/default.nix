@@ -30,6 +30,15 @@
     memoryPercent = 50;
   };
 
+  # Kills the most pressured service or session once memory pressure stays
+  # above 80%, before the kernel OOM killer would, which only acts after the
+  # system froze, while systemd restarts killed services as configured.
+  systemd.oomd = {
+    enableRootSlice = true;
+    enableSystemSlice = true;
+    enableUserSlices = true;
+  };
+
   systemd.sleep.settings.Sleep = {
     AllowSuspend = "no";
     AllowHibernation = "no";
