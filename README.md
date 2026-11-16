@@ -252,19 +252,17 @@ After the first boot, replace the GPU placeholders in `hosts/pythia/vllm.nix` wi
 
 ### Disk replacement
 
-Copy the partition table of the remaining SSD (`/dev/disk/by-id/<old>`) to the new one (`/dev/disk/by-id/<new>`) with fresh GUIDs, which keeps the partition labels the configuration refers to.
-Then replace the missing mirror half and reinstall the bootloader into both ESPs:
+Put the new SSD's entry in `/dev/disk/by-id` into `hosts/pythia/disk.nix`.
+disko's `format` mode then partitions and formats only that SSD, since it leaves existing partition tables, file systems, and pools alone.
+Replace the missing mirror half with the new partition and reinstall the bootloader into both ESPs:
 
 ```bash
-sudo sgdisk --replicate=/dev/disk/by-id/<new> /dev/disk/by-id/<old>
-sudo sgdisk --randomize-guids /dev/disk/by-id/<new>
-sudo mkfs.vfat /dev/disk/by-partlabel/disk-b-ESP
+sudo nix run github:nix-community/disko/latest -- --mode format --flake .#pythia
 sudo zpool replace zroot <missing-vdev> /dev/disk/by-partlabel/disk-b-zfs
 sudo mount /boot-fallback && sudo nixos-rebuild boot --install-bootloader
 ```
 
-Swap `a` and `b` if the first SSD failed, and take `<missing-vdev>` from `zpool status`.
-Update the disk path in `hosts/pythia/disk.nix` afterwards.
+Use `disk-a-zfs` and `/boot` if the first SSD failed, and take `<missing-vdev>` from `zpool status`.
 
 ### Certificate
 
