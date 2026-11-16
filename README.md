@@ -278,16 +278,17 @@ sudo systemctl restart caddy
 ### Clients
 
 Caddy serves llmhop's models over TLS at `https://pythia.dfki.uni-trier.de` (`hosts/pythia/llmhop.nix`), proxying to llmhop's unix socket, and each client authenticates with its own bearer token.
-Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, read when llmhop starts, and its sockets hold new connections while it restarts.
+Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, which llmhop reads at startup and on `systemctl reload llmhop`, without a restart.
 The tokens of the clients listed in `clients` are generated before llmhop first starts, while any other one is added by hand:
 
 ```bash
 (umask 077; od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /etc/credstore/llmhop.token.<client>)
-systemctl restart llmhop
+systemctl reload llmhop
 cat /etc/credstore/llmhop.token.<client>
 ```
 
-Rotate a token by replacing its file, and revoke it by deleting the file, each followed by a restart.
+Rotate a token by replacing its file, and revoke it by deleting the file, each followed by a reload.
+If the tokens fail to load, llmhop keeps the previous ones and logs the error.
 Without any token, llmhop rejects every request rather than serving it unauthenticated.
 
 ### Watermarking
