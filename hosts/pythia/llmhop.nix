@@ -20,13 +20,12 @@ in
     };
   };
 
+  # Streams flush on their own, and a client disconnecting cancels generation.
   services.caddy.virtualHosts.llmhop = {
     domain = config.custom.rootDomain;
     geoblock = true;
     extraConfig = ''
-      reverse_proxy unix/${gateway.listen.default.socket} {
-        flush_interval -1
-      }
+      reverse_proxy unix/${gateway.listen.default.socket}
     '';
   };
 
