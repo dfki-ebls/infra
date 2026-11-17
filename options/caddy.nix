@@ -81,6 +81,15 @@ let
     }
   '';
 
+  installedCertificates = cfg.enableCertificates && cfg.installedCertificates;
+  certificateCredentials = [
+    "caddy.tls.cert"
+    "caddy.tls.key"
+  ];
+  installedTls = ''
+    tls ${lib.concatMapStringsSep " " (name: "{$CREDENTIALS_DIRECTORY}/${name}") certificateCredentials}
+  '';
+
   # Curated honeypot paths we never serve.
   scannerHoneypots = ''
     @scanner path /wp-admin* /wp-login* /wp-content* /xmlrpc.php /phpmyadmin* /pma* /.aws/* /.ssh/* /administrator /admin.php /shell.php
@@ -145,6 +154,7 @@ let
               securityHeaders config.securityHeaders.frameAncestors
             )
             ++ lib.optional config.scannerHoneypots scannerHoneypots
+            ++ lib.optional installedCertificates installedTls
           )
         );
       };
@@ -166,6 +176,7 @@ in
       enableCertificates = lib.mkEnableOption "secure connections for services" // {
         default = true;
       };
+      installedCertificates = lib.mkEnableOption "serving the installed certificate files `caddy.tls.cert` and `caddy.tls.key` from the credential store instead of ACME certificates";
     };
 
     services.caddy.virtualHosts = lib.mkOption {
@@ -174,6 +185,9 @@ in
   };
 
   config = lib.mkIf config.services.caddy.enable {
+    systemd.services.caddy.serviceConfig.ImportCredential =
+      lib.mkIf installedCertificates certificateCredentials;
+
     services.caddy = {
       package = pkgs.caddy-custom;
       openFirewall = true;

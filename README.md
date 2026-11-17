@@ -266,7 +266,7 @@ Use `disk-a-zfs` and `/boot` if the first SSD failed, and take `<missing-vdev>` 
 
 ### Certificate
 
-Caddy serves the certificate files `/etc/credstore/caddy.tls.cert`, holding the full chain, and `/etc/credstore/caddy.tls.key`, which only root can read.
+With `custom.installedCertificates`, Caddy serves the certificate files `/etc/credstore/caddy.tls.cert`, holding the full chain, and `/etc/credstore/caddy.tls.key`, which only root can read.
 Install a new certificate, also when renewing, then restart Caddy:
 
 ```bash

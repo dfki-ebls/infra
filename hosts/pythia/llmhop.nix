@@ -24,19 +24,11 @@ in
     domain = config.custom.rootDomain;
     geoblock = true;
     extraConfig = ''
-      ${lib.optionalString config.custom.enableCertificates ''
-        tls {$CREDENTIALS_DIRECTORY}/caddy.tls.cert {$CREDENTIALS_DIRECTORY}/caddy.tls.key
-      ''}
       reverse_proxy unix/${gateway.listen.default.socket} {
         flush_interval -1
       }
     '';
   };
-
-  systemd.services.caddy.serviceConfig.ImportCredential = [
-    "caddy.tls.cert"
-    "caddy.tls.key"
-  ];
 
   custom.credstore = lib.mkIf config.services.llmhop.gateway.active (
     lib.genAttrs' clients (
