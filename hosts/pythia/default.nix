@@ -1,4 +1,4 @@
-# Headless vLLM inference server, with the RTX A400 driving the display for maintenance.
+# Headless vLLM inference server.
 { lib, lib', ... }:
 {
   imports = lib'.flocken.getModules ./.;
