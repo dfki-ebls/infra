@@ -3,6 +3,7 @@
   imports = [
     inputs.determinate.nixosModules.default
     inputs.disko.nixosModules.default
+    inputs.llmhop.nixosModules.default
   ]
   ++ lib'.flocken.getModules ./.;
 

@@ -2,6 +2,7 @@
 
 NixOS configurations of the hosts in `hosts/<name>`, on top of the option modules in `options`, which declare options together with the config implementing them, and the base config in `modules`.
 With `services.caddy.enable`, `options/caddy.nix` serves the vhosts below `custom.rootDomain`, and hosts opt into the profile `profiles/proxmox.nix` for a Proxmox VM guest with its image `<host>-image`.
+Hosts enabling `services.llmhop.vllm` get the shared setup of `modules/vllm.nix` and declare their own models.
 Every host gets a VM for testing, which disables NVIDIA and, with Caddy enabled, serves the vhosts below `localhost` on port 80.
 
 | Host     | Purpose                                                           |

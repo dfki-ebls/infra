@@ -1,7 +1,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 # Target hardware: NVIDIA RTX PRO 4500 Blackwell, 32 GB GDDR7.
@@ -16,19 +15,8 @@ let
   };
 in
 lib.mkIf config.custom.enableNvidia {
-  # llmhop grants it to every workload with a `watermark`.
-  # An unsigned 64-bit integer, as vLLM requires.
-  custom.credstore."vllm.watermark-key" = "od -An -N8 -tu8 /dev/urandom | tr -d ' '";
-
   services.llmhop.vllm = {
     enable = true;
-    package = pkgs.vllm;
-    uid = 503;
-
-    environment.CUDA_HOME = "${pkgs.vllm.cudaHome}";
-
-    # Optional, skipped while missing.
-    fetch.hfTokenCredential = "huggingface.token";
 
     # https://docs.vllm.ai/en/stable/cli/serve/
     modelSettings = {

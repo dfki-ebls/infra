@@ -7,7 +7,6 @@
 {
   imports = [
     ../../profiles/proxmox.nix
-    inputs.llmhop.nixosModules.default
     inputs.hivegent.nixosModules.default
   ]
   ++ lib'.flocken.getModules ./.;
