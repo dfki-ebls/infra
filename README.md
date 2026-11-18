@@ -113,6 +113,8 @@ Remove a secret by deleting its file and restarting.
 
 - The API accepts tokens only of the exact clients `hivegent-spa` and `hivegent-integration`.
 - Caddy enforces a Content Security Policy on the SPA that allows images, fetches, and frames only from the vhost itself, `blob:`/`data:` URLs, and Rauthy, so model output cannot exfiltrate data through remote images.
+  Future work: the policy does not restrict scripts yet, so it should add `script-src 'self'` with the hash of the inline script of `index.html`, or move that script into a file, plus `object-src 'none'` and `default-src 'none'` with the remaining fetch directives.
+  The `Content-Security-Policy` set inside `handle /api/*` is redundant, since the deferred `@csp_api` header replaces it.
 - The backend unit runs without host devices, since the GPU is hidden from it.
 - Postgres listens only on its unix socket, and each service role may connect only to the database of the same name.
 

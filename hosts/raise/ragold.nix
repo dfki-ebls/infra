@@ -17,9 +17,39 @@ in
 
   services.caddy.virtualHosts.ragold = {
     subdomain = "ragold";
+    # The viewers render uploads as blob and data URLs, in blob workers for
+    # PDFs and spreadsheets, and the UI sets inline styles.
+    securityHeaders.contentSecurityPolicy = {
+      default-src = [ "'self'" ];
+      connect-src = [
+        "'self'"
+        "blob:"
+        "data:"
+      ];
+      img-src = [
+        "'self'"
+        "blob:"
+        "data:"
+      ];
+      font-src = [
+        "'self'"
+        "data:"
+      ];
+      style-src = [
+        "'self'"
+        "'unsafe-inline'"
+      ];
+      worker-src = [
+        "'self'"
+        "blob:"
+      ];
+      object-src = [ "'none'" ];
+      base-uri = [ "'none'" ];
+      form-action = [ "'none'" ];
+    };
     extraConfig = ''
       root * ${ragold}
-      encode zstd gzip
+      encode
 
       header {
         -ETag

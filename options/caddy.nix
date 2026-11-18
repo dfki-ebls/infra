@@ -10,44 +10,37 @@
 let
   cfg = config.custom;
 
-  # Baseline response headers for public vhosts. Framing is denied by default,
-  # and vhosts can opt into the specific ancestors required by their flows.
-  # Browsers enforce every CSP header and apply the intersection, so the frame
-  # policy must be emitted once here rather than overridden by a later header.
+  # Response headers of a vhost, where null deletes a header. Deleting makes
+  # Caddy defer the block until the response is written, so it also replaces
+  # the headers of a proxied app and of any header directive sorted before it.
+  # Browsers enforce the intersection of all CSP headers, so the policy is
+  # emitted once here, where `frame-ancestors` supersedes X-Frame-Options.
   securityHeaders =
-    frameAncestors:
-    let
-      formatFrameAncestor =
-        source:
-        if
-          lib.elem source [
-            "none"
-            "self"
-          ]
-        then
-          "'${source}'"
-        else
-          source;
-      xFrameOptions =
-        if frameAncestors == [ "none" ] then
-          "X-Frame-Options DENY"
-        else if frameAncestors == [ "self" ] then
-          "X-Frame-Options SAMEORIGIN"
-        else
-          "-X-Frame-Options";
-    in
-    ''
-      header {
-        X-Content-Type-Options nosniff
-        ${xFrameOptions}
-        Referrer-Policy strict-origin-when-cross-origin
-        Content-Security-Policy "frame-ancestors ${lib.concatStringsSep " " (map formatFrameAncestor frameAncestors)}"
-        -Server
-        ${lib.optionalString cfg.enableCertificates ''
-          Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        ''}
-      }
-    '';
+    contentSecurityPolicy:
+    {
+      Content-Security-Policy = lib.concatStringsSep "; " (
+        lib.mapAttrsToList (
+          directive: sources: "${directive} ${lib.concatStringsSep " " sources}"
+        ) contentSecurityPolicy
+      );
+      X-Content-Type-Options = "nosniff";
+      X-Frame-Options = null;
+      Server = null;
+    }
+    // lib.optionalAttrs cfg.enableCertificates {
+      Strict-Transport-Security = "max-age=31536000; includeSubDomains";
+    };
+
+  renderHeaders = headers: ''
+    header {
+    ${
+      lib.concatStrings (
+        lib.mapAttrsToList (
+          name: value: if value == null then "  -${name}\n" else "  ${name} \"${value}\"\n"
+        ) headers
+      )
+    }}
+  '';
 
   # Server-local `client_ip` allowlist for internal services, resolved when
   # Caddy adapts its config at startup. The directory lives only on the server,
@@ -135,23 +128,29 @@ let
           enable = lib.mkEnableOption "the baseline security headers" // {
             default = true;
           };
-          frameAncestors = lib.mkOption {
-            type = with lib.types; listOf str;
-            default = [ "none" ];
-            example = [ "self" ];
-            description = "Sources allowed to frame the vhost, where `none` and `self` are keywords.";
+          contentSecurityPolicy = lib.mkOption {
+            type = with lib.types; attrsOf (listOf str);
+            example = {
+              default-src = [ "'self'" ];
+              object-src = [ "'none'" ];
+            };
+            description = ''
+              Content-Security-Policy of the vhost, as sources in CSP syntax by
+              directive, denying framing unless it sets `frame-ancestors`.
+            '';
           };
         };
       };
 
       config = {
         hostName = lib.mkIf (config.domain != null) (lib.mkDefault config.address);
+        securityHeaders.contentSecurityPolicy.frame-ancestors = lib.mkDefault [ "'none'" ];
         extraConfig = lib.mkBefore (
           lib.concatStrings (
             lib.optional (config.vpnOnly && cfg.enableVpnAllowlist) vpnAllowlist
             ++ lib.optional (config.geoblock && cfg.enableGeoblocking) geoblock
             ++ lib.optional config.securityHeaders.enable (
-              securityHeaders config.securityHeaders.frameAncestors
+              renderHeaders (securityHeaders config.securityHeaders.contentSecurityPolicy)
             )
             ++ lib.optional config.scannerHoneypots scannerHoneypots
             ++ lib.optional installedCertificates installedTls

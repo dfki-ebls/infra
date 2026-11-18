@@ -19,9 +19,30 @@ in
     };
     website = {
       domain = if production then "raise.dfki.de" else config.custom.rootDomain;
+      # Starlight's pages carry inline scripts, which `default-src` would block
+      # without their hashes, so every other fetch directive is listed instead.
+      securityHeaders.contentSecurityPolicy = {
+        connect-src = [ "'self'" ];
+        img-src = [
+          "'self'"
+          "data:"
+        ];
+        font-src = [ "'self'" ];
+        style-src = [
+          "'self'"
+          "'unsafe-inline'"
+        ];
+        media-src = [ "'none'" ];
+        frame-src = [ "'none'" ];
+        worker-src = [ "'none'" ];
+        manifest-src = [ "'none'" ];
+        object-src = [ "'none'" ];
+        base-uri = [ "'none'" ];
+        form-action = [ "'none'" ];
+      };
       extraConfig = ''
         root * ${inputs.website.packages.${pkgs.stdenv.system}.default}
-        encode zstd gzip
+        encode
 
         @immutable path /assets/*
         header @immutable Cache-Control "public, max-age=31536000, immutable"

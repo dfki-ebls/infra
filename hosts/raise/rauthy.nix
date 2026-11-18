@@ -96,9 +96,13 @@ in
     subdomain = "sso";
     vpnOnly = true;
     geoblock = true;
-    # oidc-spa restores sessions through a hidden authorization iframe, so
-    # Rauthy must allow the Hivegent SPA origin to frame auth responses.
-    securityHeaders.frameAncestors = [ vhosts.hivegent.address ];
+    # Replaces Rauthy's own policy, so keeps its `object-src`. oidc-spa restores
+    # sessions through a hidden authorization iframe, so Rauthy must allow the
+    # Hivegent SPA origin to frame auth responses.
+    securityHeaders.contentSecurityPolicy = {
+      frame-ancestors = [ vhosts.hivegent.address ];
+      object-src = [ "'none'" ];
+    };
     extraConfig = ''
       reverse_proxy 127.0.0.1:${toString port}
     '';
