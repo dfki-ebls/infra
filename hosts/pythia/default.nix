@@ -1,5 +1,10 @@
 # Headless vLLM inference server.
-{ lib, lib', ... }:
+{
+  lib,
+  lib',
+  config,
+  ...
+}:
 {
   imports = lib'.flocken.getModules ./.;
 
@@ -11,5 +16,12 @@
     # Issued by the university, see README.
     installedCertificates = true;
   };
-  services.caddy.enable = true;
+  services.caddy = {
+    enable = true;
+    # The only vhost, which services such as llmhop extend.
+    virtualHosts.root = {
+      domain = config.custom.rootDomain;
+      geoblock = true;
+    };
+  };
 }
