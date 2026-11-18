@@ -4,6 +4,9 @@ let
   imgSize = 1536;
   # Mixed precision, the smallest build, which leaves the most KV cache.
   model = "unsloth/Qwen3.8-27B-NVFP4";
+  # The official repository's tokenizer, which every quantization shares, keeps
+  # detection independent of the checkpoint served.
+  tokenizer = "Qwen/Qwen3.8-27B";
   # Shared by the generating worker and its detector.
   watermark.settings = {
     # The algorithm that supports speculative decoding.
@@ -72,12 +75,12 @@ lib.mkIf config.custom.enableNvidia {
 
     detectors.watermark.profiles = {
       "qwen3.8-27b" = {
-        tokenizer = model;
+        inherit tokenizer;
         inherit watermark;
       };
       # Text marked before MTP was enabled.
       "qwen3.8-27b-gumbel" = {
-        tokenizer = model;
+        inherit tokenizer;
         watermark.settings = {
           algorithm = "gumbel";
           deduplicate_contexts = "all";

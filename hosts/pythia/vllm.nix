@@ -7,7 +7,9 @@ let
   # Frames sampled from a video, and their size.
   videoFrames = 64;
   videoSize = 640;
-  qwen = "nvidia/Qwen3.8-27B-NVFP4";
+  # The official repository's tokenizer, which every quantization shares, keeps
+  # detection independent of the checkpoint served.
+  tokenizer = "Qwen/Qwen3.8-27B";
   # Shared by the generating worker and its detector.
   watermark.settings = {
     # The algorithm that supports speculative decoding.
@@ -30,7 +32,7 @@ lib.mkIf config.custom.enableNvidia {
       # One engine over both cards, whose single prefix cache serves every
       # turn of a session.
       "qwen3.8-27b" = {
-        model = qwen;
+        model = "nvidia/Qwen3.8-27B-NVFP4";
         # Both Workstation Editions at PCI 11:00.0 and F1:00.0, see README.
         environment.CUDA_VISIBLE_DEVICES = "0,2";
         inherit watermark;
@@ -164,12 +166,12 @@ lib.mkIf config.custom.enableNvidia {
 
     detectors.watermark.profiles = {
       "qwen3.8-27b" = {
-        tokenizer = qwen;
+        inherit tokenizer;
         inherit watermark;
       };
       # Text marked before MTP was enabled.
       "qwen3.8-27b-gumbel" = {
-        tokenizer = qwen;
+        inherit tokenizer;
         watermark.settings = {
           algorithm = "gumbel";
           deduplicate_contexts = "all";
