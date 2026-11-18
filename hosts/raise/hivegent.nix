@@ -34,6 +34,7 @@ let
   llmhopUrl = "http://llmhop";
   llmhopListener = config.services.llmhop.gateway.llmhop.listen.default;
   inherit (config.services.llmhop.vllm) detectors;
+  llmModel = "qwen3.8-27b";
   withTransparency = lib.mkIf (detectors ? watermark);
   withLlmhop = lib.mkIf config.services.llmhop.gateway.active;
   # 32 random bytes in hex.
@@ -98,14 +99,15 @@ in
       };
 
       llm = {
-        model = "qwen3.8-27b";
+        model = llmModel;
         base_url = "${llmhopUrl}/v1";
         inference_provider = "vllm";
       };
 
-      multimodal = {
-        # depends on image limit in vllm.nix
-        max_images = 2;
+      # The model's own limit, since it rejects a request over it.
+      multimodal = withLlmhop {
+        max_images =
+          config.services.llmhop.vllm.models.${llmModel}.settings.limit-mm-per-prompt.image.count;
       };
 
       # Lets web_fetch open any public page the user or a search named.
