@@ -225,7 +225,7 @@ Rotate the secret from the same admin UI screen; nothing in the Nix store needs 
 
 ## pythia
 
-raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with the `hivegent` client token.
+raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with a token from `llmhopctl token create hivegent`.
 
 ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, two RTX PRO 6000 Blackwell Workstation Edition cards for Qwen3.8 and an RTX PRO 6000 Blackwell Max-Q for the embedding and OCR models.
 
@@ -290,15 +290,15 @@ Caddy serves llmhop's models over TLS at `https://pythia.dfki.uni-trier.de` (`ho
 The models are `qwen3.8-27b` for chat, `qwen3-embedding-4b` for embeddings, whose queries take the prefix `Instruct: <task>\nQuery:` while documents take none, and `lightonocr-3-4b` for OCR, which turns one page image per chat completion into Markdown, with layout boxes if the text is `grounding`.
 Docling's `lightonocr3_4b` preset reaches it through its API engine with the `model` param set to `lightonocr-3-4b`.
 Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, which llmhop reads at startup and on `systemctl reload llmhop`, without a restart.
-The tokens of the clients listed in `clients` are generated before llmhop first starts, while any other one is added by hand:
+`llmhopctl` manages the tokens, reloading llmhop and printing new ones:
 
 ```bash
-(umask 077; od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /etc/credstore/llmhop.token.<client>)
-systemctl reload llmhop
-cat /etc/credstore/llmhop.token.<client>
+sudo llmhopctl token list
+sudo llmhopctl token create <client>
+sudo llmhopctl token rotate <client>
+sudo llmhopctl token revoke <client>
 ```
 
-Rotate a token by replacing its file, and revoke it by deleting the file, each followed by a reload.
 If the config fails to load, llmhop keeps the previous one and logs the error.
 Without any token, llmhop rejects every request rather than serving it unauthenticated.
 

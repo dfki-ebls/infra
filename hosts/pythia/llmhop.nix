@@ -1,11 +1,4 @@
-{ lib, config, ... }:
-let
-  gateway = config.services.llmhop.gateway.llmhop;
-  # Every credential with this prefix is a client token, see README.
-  prefix = "llmhop.token.";
-  # Clients whose tokens are generated, besides those added by hand.
-  clients = [ "hivegent" ];
-in
+{ config, ... }:
 {
   services.llmhop.gateway = {
     type = "llmhop";
@@ -16,18 +9,13 @@ in
         port = null;
         socketGroup = config.services.caddy.group;
       };
-      settings.authTokenCredentials = "${prefix}*";
+      # Every credential with this prefix is a client token, see README.
+      settings.authTokenCredentials = "llmhop.token.*";
     };
   };
 
   # Streams flush on their own, and a client disconnecting cancels generation.
   services.caddy.virtualHosts.root.extraConfig = ''
-    reverse_proxy unix/${gateway.listen.default.socket}
+    reverse_proxy unix/${config.services.llmhop.gateway.llmhop.listen.default.socket}
   '';
-
-  custom.credstore = lib.mkIf config.services.llmhop.gateway.active (
-    lib.genAttrs' clients (
-      client: lib.nameValuePair "${prefix}${client}" "od -An -N32 -tx1 /dev/urandom | tr -d ' \\n'"
-    )
-  );
 }
