@@ -1,14 +1,14 @@
 # ZFS mirror over both SSDs with an ESP on each, so either one boots on its own.
 { lib, config, ... }:
 let
-  # Device placeholders, replace with the `/dev/disk/by-id` paths of the SSDs.
+  # By slot, so a replacement in the same slot needs no change, see README.
   disks = {
     a = {
-      device = "/dev/disk/by-id/nvme-Samsung_SSD_9100_PRO_PLACEHOLDER_A";
+      device = "/dev/disk/by-path/pci-0000:a9:00.0-nvme-1";
       esp = "/boot";
     };
     b = {
-      device = "/dev/disk/by-id/nvme-Samsung_SSD_9100_PRO_PLACEHOLDER_B";
+      device = "/dev/disk/by-path/pci-0000:aa:00.0-nvme-1";
       esp = "/boot-fallback";
     };
   };

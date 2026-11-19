@@ -248,7 +248,7 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/<usb> bs=4M status=progress oflag=sync
 ```
 
 Boot pythia from it and connect with `ssh root@<ip>`.
-Replace the placeholder disk paths in `hosts/pythia/disk.nix` with the SSDs' entries in `/dev/disk/by-id`, and the GPU indices in `hosts/pythia/vllm.nix` with the positions of the three RTX PRO 6000 in PCI bus order, counting from 0, which `nvidia-smi --query-gpu=pci.bus_id,name --format=csv,noheader | sort` lists.
+Replace the disk paths in `hosts/pythia/disk.nix` with the SSDs' slots in `/dev/disk/by-path` that end in the namespace `-nvme-1`, and the GPU indices in `hosts/pythia/vllm.nix` with the positions of the three RTX PRO 6000 in PCI bus order, counting from 0, which `nvidia-smi --query-gpu=pci.bus_id,name --format=csv,noheader | sort` lists.
 The indices follow the slots, so moving a card to another slot moves the models with it.
 Then partition, format, and install:
 
@@ -259,8 +259,9 @@ sudo nixos-install --flake github:dfki-ebls/infra#pythia --no-root-passwd
 
 ### Disk replacement
 
-Put the new SSD's entry in `/dev/disk/by-id` into `hosts/pythia/disk.nix`.
-disko's `format` mode then partitions and formats only that SSD, since it leaves existing partition tables, file systems, and pools alone.
+A new SSD in the same slot keeps its path in `/dev/disk/by-path`, so `hosts/pythia/disk.nix` needs no change.
+Adding or removing PCIe devices may renumber the slots, so check the paths before running disko, which wipes whatever they point to.
+disko's `format` mode partitions and formats only the new SSD, since it leaves existing partition tables, file systems, and pools alone.
 Replace the missing mirror half with the new partition and reinstall the bootloader into both ESPs:
 
 ```bash
