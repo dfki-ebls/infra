@@ -184,31 +184,40 @@ in
   };
 
   config = lib.mkIf config.services.caddy.enable {
-    systemd.services.caddy.serviceConfig.ImportCredential =
-      lib.mkIf installedCertificates certificateCredentials;
+    # Every vhost serves the installed certificate, so without it Caddy is
+    # skipped rather than failing to load or falling back to ACME.
+    systemd.services.caddy = lib.mkIf installedCertificates {
+      serviceConfig.ImportCredential = certificateCredentials;
+      unitConfig.ConditionPathExists = map (
+        name: "${cfg.credstoreDirectory}/${name}"
+      ) certificateCredentials;
+    };
 
     services.caddy = {
       package = pkgs.caddy-custom;
       openFirewall = true;
-      email = config.custom.admin.mail;
+      email = lib.mkIf (!installedCertificates) config.custom.admin.mail;
       enableReload = false; # requires admin api
-      globalConfig = ''
-        admin off
-        persist_config off
+      globalConfig = lib.mkMerge [
+        (lib.mkIf installedCertificates "auto_https disable_certs")
+        ''
+          admin off
+          persist_config off
 
-        # Slow-loris limits. The header timeout is the effective guard;
-        # read_body must stay generous because it spans the entire request
-        # body transfer — a 50 MB document upload on a slow uplink
-        # (~2 Mbit/s) takes minutes, and tripping the timeout mid-body
-        # surfaces as an opaque 502 from the reverse proxy.
-        servers {
-          timeouts {
-            read_header 10s
-            read_body   10m
-            idle        2m
+          # Slow-loris limits. The header timeout is the effective guard;
+          # read_body must stay generous because it spans the entire request
+          # body transfer — a 50 MB document upload on a slow uplink
+          # (~2 Mbit/s) takes minutes, and tripping the timeout mid-body
+          # surfaces as an opaque 502 from the reverse proxy.
+          servers {
+            timeouts {
+              read_header 10s
+              read_body   10m
+              idle        2m
+            }
           }
-        }
-      '';
+        ''
+      ];
     };
 
     # Serves the vhosts as subdomains of localhost over HTTP on the host's port 80.

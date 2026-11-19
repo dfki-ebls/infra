@@ -26,6 +26,13 @@ let
   ) config.custom.credstore;
 in
 {
+  options.custom.credstoreDirectory = lib.mkOption {
+    type = lib.types.str;
+    readOnly = true;
+    default = credstore;
+    description = "Directory of the credentials that `ImportCredential=` reads and `custom.credstore` generates.";
+  };
+
   options.custom.credstore = lib.mkOption {
     type = lib.types.attrsOf lib.types.str;
     default = { };
