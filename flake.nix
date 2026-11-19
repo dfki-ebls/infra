@@ -52,6 +52,15 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    bearchat = {
+      url = "github:mirkolenz/bearchat";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        systems.follows = "systems";
+        flake-parts.follows = "flake-parts";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
     ragold = {
       url = "github:dfki-ebls/ragold/v1";
       inputs = {

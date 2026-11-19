@@ -296,8 +296,14 @@ cat /etc/credstore/llmhop.token.<client>
 ```
 
 Rotate a token by replacing its file, and revoke it by deleting the file, each followed by a reload.
-If the tokens fail to load, llmhop keeps the previous ones and logs the error.
+If the config fails to load, llmhop keeps the previous one and logs the error.
 Without any token, llmhop rejects every request rather than serving it unauthenticated.
+
+### Chat
+
+[BearChat](https://github.com/mirkolenz/bearchat) serves a chat interface for `qwen3.8-27b` at `https://pythia.dfki.uni-trier.de/chat` (`hosts/pythia/bearchat.nix`).
+Users sign in with an llmhop token, created like any other client's, which Caddy keeps in an `HttpOnly` cookie, so revoking the token also ends their session.
+Chats stay in the browser, so the server keeps no history.
 
 ### Watermarking
 

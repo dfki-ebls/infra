@@ -17,6 +17,35 @@
         "type": "github"
       }
     },
+    "bearchat": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "systems": [
+          "systems"
+        ],
+        "treefmt-nix": [
+          "treefmt-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795079147,
+        "narHash": "sha256-vZjq4EKxV2CS7WwDRhV3+VCtlVEmoB2qrXACiSU/aYQ=",
+        "owner": "mirkolenz",
+        "repo": "bearchat",
+        "rev": "f343d7e3090cc6ecfb8765c7b2040c97dd591d93",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mirkolenz",
+        "repo": "bearchat",
+        "type": "github"
+      }
+    },
     "bombon": {
       "inputs": {
         "nixpkgs": [
@@ -627,6 +656,7 @@
     },
     "root": {
       "inputs": {
+        "bearchat": "bearchat",
         "determinate": "determinate",
         "disko": "disko",
         "flake-parts": "flake-parts_2",
