@@ -234,6 +234,9 @@ ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, 
 The two SSDs each hold an ESP and a ZFS partition, which form a mirror (`hosts/pythia/disk.nix`).
 GRUB installs itself into both ESPs, with a firmware boot entry for each, so either SSD boots on its own.
 If one fails, the initrd waits for it briefly and then imports the pool degraded, without manual intervention.
+vLLM's cache has its own dataset `zroot/vllm`, which keeps the weights out of the ARC since the page cache already holds them.
+The empty dataset `zroot/reserved` holds back 50 GB, so that a full pool can still delete files after `zfs set refreservation=none zroot/reserved`.
+disko's `format` mode also applies dataset changes to the running system, creating missing datasets and setting changed properties, which take effect after a reboot or `nixos-rebuild switch` mounts them.
 
 ### Installation
 

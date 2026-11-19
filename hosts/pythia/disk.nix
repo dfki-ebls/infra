@@ -1,5 +1,5 @@
 # ZFS mirror over both SSDs with an ESP on each, so either one boots on its own.
-{ lib, ... }:
+{ lib, config, ... }:
 let
   # Device placeholders, replace with the `/dev/disk/by-id` paths of the SSDs.
   disks = {
@@ -69,6 +69,27 @@ in
         home = {
           type = "zfs_fs";
           mountpoint = "/home";
+        };
+        # vLLM memory-maps the weights, which the page cache then holds,
+        # so the ARC only keeps their metadata instead of a second copy.
+        # OpenZFS keeps a partially read record until it is read through,
+        # so the page-sized faults do not reread whole records.
+        vllm = {
+          type = "zfs_fs";
+          mountpoint = config.services.llmhop.vllm.cache.directory;
+          options = {
+            primarycache = "metadata";
+            recordsize = "1M";
+          };
+        };
+        # Unused space that keeps a full pool writable for deleting files,
+        # released with `zfs set refreservation=none zroot/reserved`.
+        reserved = {
+          type = "zfs_fs";
+          options = {
+            mountpoint = "none";
+            refreservation = "50G";
+          };
         };
       };
     };
