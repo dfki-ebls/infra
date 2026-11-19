@@ -240,7 +240,7 @@ disko's `format` mode also applies dataset changes to the running system, creati
 
 ### Installation
 
-Build the installer image, which accepts the admin's SSH keys for `root`, and write it to a USB stick:
+Build the installer image with the NVIDIA driver, which accepts the admin's SSH keys for `root`, and write it to a USB stick:
 
 ```bash
 nix build .#legacyPackages.x86_64-linux.installer.iso-installer
@@ -248,16 +248,14 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/<usb> bs=4M status=progress oflag=sync
 ```
 
 Boot pythia from it and connect with `ssh root@<ip>`.
-Replace the placeholder disk paths in `hosts/pythia/disk.nix` with the SSDs' entries in `/dev/disk/by-id`.
+Replace the placeholder disk paths in `hosts/pythia/disk.nix` with the SSDs' entries in `/dev/disk/by-id`, and the GPU indices in `hosts/pythia/vllm.nix` with the positions of the three RTX PRO 6000 in PCI bus order, counting from 0, which `nvidia-smi --query-gpu=pci.bus_id,name --format=csv,noheader | sort` lists.
+The indices follow the slots, so moving a card to another slot moves the models with it.
 Then partition, format, and install:
 
 ```bash
 sudo nix run github:nix-community/disko/latest -- --mode destroy,format,mount --flake github:dfki-ebls/infra#pythia
 sudo nixos-install --flake github:dfki-ebls/infra#pythia --no-root-passwd
 ```
-
-After the first boot, replace the GPU indices in `hosts/pythia/vllm.nix` with the positions of the three RTX PRO 6000 in PCI bus order, counting from 0, which `nvidia-smi --query-gpu=pci.bus_id,name --format=csv,noheader | sort` lists.
-The indices follow the slots, so moving a card to another slot moves the models with it.
 
 ### Disk replacement
 
