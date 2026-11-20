@@ -47,9 +47,9 @@ lib.mkIf config.custom.enableNvidia {
           # A card holds more FP8 KV cache than its compute can serve, so
           # NVFP4 would only cost accuracy.
           kv-cache-dtype = "fp8";
-          # GiB of pinned host memory over both cards, larger than their GPU
-          # KV cache so that offloaded prefixes add hits.
-          kv-offloading-size = 160;
+          # GiB of pinned host memory over both cards, held in /dev/shm, whose
+          # default of half the RAM (125 GiB) needs headroom for the workers.
+          kv-offloading-size = 96;
           max-num-seqs = 256;
           max-num-batched-tokens = 16384;
           # Caps the chunk of a long prompt at a fair share of the batch, so
