@@ -145,8 +145,14 @@ lib.mkIf config.custom.enableNvidia {
         environment.CUDA_VISIBLE_DEVICES = "1";
         settings = {
           quantization = "fp8_per_block";
-          # Reads the page in full precision.
-          quantization-config.ignore = [ "visual.*" ];
+          # Reads the page in full precision. The tiny gate projections of the
+          # linear attention (N=32) stay unquantized, since vLLM picks CUTLASS
+          # for them, which rejects that shape on SM120.
+          # https://github.com/vllm-project/vllm/pull/54182
+          quantization-config.ignore = [
+            "visual.*"
+            "*.in_proj_ba"
+          ];
           # KV cache for the pages in flight below.
           gpu-memory-utilization = 0.25;
           max-model-len = "18K"; # upstream recommends 18000
