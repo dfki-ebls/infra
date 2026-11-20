@@ -25,6 +25,9 @@
   };
 
   boot.loader.efi.canTouchEfiVariables = true;
+  # On disk rather than tmpfs, whose pages would compete with the memory that
+  # services such as vLLM claim up front.
+  boot.tmp.cleanOnBoot = true;
 
   zramSwap = {
     enable = true;
