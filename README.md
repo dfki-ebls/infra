@@ -227,7 +227,7 @@ Rotate the secret from the same admin UI screen; nothing in the Nix store needs 
 
 raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with a token from `llmhopctl token create hivegent`.
 
-ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, two RTX PRO 6000 Blackwell Workstation Edition cards for Qwen3.8 and an RTX PRO 6000 Blackwell Max-Q for the embedding and OCR models.
+ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, two RTX PRO 6000 Blackwell Workstation Edition cards for Qwen3.8 and an RTX PRO 6000 Blackwell Max-Q for the embedding, OCR, auxiliary and decision models.
 
 ### Disks
 
@@ -287,7 +287,10 @@ sudo systemctl restart caddy
 ### Clients
 
 Caddy serves llmhop's models over TLS at `https://pythia.dfki.uni-trier.de` (`hosts/pythia/llmhop.nix`), proxying to llmhop's unix socket, and each client authenticates with its own bearer token.
-The models are `qwen3.8-27b` for chat, `qwen3-embedding-4b` for embeddings, whose queries take the prefix `Instruct: <task>\nQuery:` while documents take none, and `lightonocr-3-4b` for OCR, which turns one page image per chat completion into Markdown, with layout boxes if the text is `grounding`.
+The models are `qwen3.8-27b` for chat, `qwen3-embedding-4b` for embeddings of up to 16K tokens, whose queries take the prefix `Instruct: <task>\nQuery:` while documents take none, and `lightonocr-3-4b` for OCR, which turns one page image per chat completion into Markdown, with layout boxes if the text is `grounding`.
+`qwen3.6-35b-a3b` serves many concurrent short tasks such as image captions, summaries and follow-up questions, without thinking unless a request sets `chat_template_kwargs.enable_thinking`.
+`d3` answers typed questions (`choice`, `noul`, `score`) about a state with text, images or videos on `/v1/systemone`, returning a probability for every option, see [vLLM's docs](https://docs.vllm.ai/en/latest/models/structured_decisions_models/).
+Both Qwen models answer on that endpoint too, reading each option's label from their first token.
 Docling's `lightonocr3_4b` preset reaches it through its API engine with the `model` param set to `lightonocr-3-4b`.
 Every credential named `llmhop.token.<client>` in `/etc/credstore` is a token, which llmhop reads at startup and on `systemctl reload llmhop`, without a restart.
 `llmhopctl` manages the tokens, reloading llmhop and printing new ones:
@@ -310,4 +313,4 @@ Chats stay in the browser, so the server keeps no history.
 
 ### Watermarking
 
-Only `qwen3.8-27b` is watermarked, see [watermarking](#watermarking), since the embedding model produces no text and the OCR model only transcribes documents.
+Only `qwen3.8-27b` is watermarked, see [watermarking](#watermarking), since the embedding model produces no text, the OCR model only transcribes documents, `qwen3.6-35b-a3b` only assists other services, and `d3` only scores options.
