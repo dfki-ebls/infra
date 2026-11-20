@@ -231,12 +231,28 @@ ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, 
 
 ### Disks
 
-The two SSDs each hold an ESP and a ZFS partition, which form a mirror (`hosts/pythia/disk.nix`).
-GRUB installs itself into both ESPs, with a firmware boot entry for each, so either SSD boots on its own.
-If one fails, the initrd waits for it briefly and then imports the pool degraded, without manual intervention.
+The two SSDs each hold an ESP and a LUKS2 device, which form a ZFS mirror (`hosts/pythia/disk.nix`).
+If one fails, the initrd gives up on it after the device timeout and imports the pool degraded, without manual intervention.
+systemd-boot installs into `/boot`, and every rebuild mirrors it to `/boot-fallback`, whose removable path the firmware boots when the first SSD is missing.
+Until a failed first SSD is replaced, rebuilds fail, since systemd-boot needs `/boot`.
+
 vLLM's cache has its own dataset `zroot/vllm`, which keeps the weights out of the ARC since the page cache already holds them.
 The empty dataset `zroot/reserved` holds back 50 GB, so that a full pool can still delete files after `zfs set refreservation=none zroot/reserved`.
 disko's `format` mode also applies dataset changes to the running system, creating missing datasets and setting changed properties, which take effect after a reboot or `nixos-rebuild switch` mounts them.
+
+### TPM
+
+The TPM unlocks both LUKS devices, bound to PCR 7, the Secure Boot state.
+Without Secure Boot, this protects SSDs that leave the machine, such as returned or discarded ones, but not the machine as a whole.
+The passphrase stays as a fallback, for instance after a firmware update cleared the firmware TPM.
+Enter it on the console, locally or through the BMC's remote KVM.
+Enroll the TPM for both devices after the first boot, and again with `--wipe-slot=tpm2` after the TPM was cleared:
+
+```bash
+for device in /dev/disk/by-partlabel/disk-{a,b}-luks; do
+  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 "$device"
+done
+```
 
 ### Installation
 
@@ -250,27 +266,30 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/<usb> bs=4M status=progress oflag=sync
 Boot pythia from it and connect with `ssh root@<ip>`.
 Replace the disk paths in `hosts/pythia/disk.nix` with the SSDs' slots in `/dev/disk/by-path` that end in the namespace `-nvme-1`, and the GPU indices in `hosts/pythia/vllm.nix` with the positions of the three RTX PRO 6000 in PCI bus order, counting from 0, which `nvidia-smi --query-gpu=pci.bus_id,name --format=csv,noheader | sort` lists.
 The indices follow the slots, so moving a card to another slot moves the models with it.
-Then partition, format, and install:
+Then partition, format, and install, entering the LUKS passphrase when asked:
 
 ```bash
 sudo nix run github:nix-community/disko/latest -- --mode destroy,format,mount --flake github:dfki-ebls/infra#pythia
 sudo nixos-install --flake github:dfki-ebls/infra#pythia --no-root-passwd
 ```
 
+The first boot asks for the passphrase, afterwards enroll the TPM as described in [TPM](#tpm).
+
 ### Disk replacement
 
 A new SSD in the same slot keeps its path in `/dev/disk/by-path`, so `hosts/pythia/disk.nix` needs no change.
 Adding or removing PCIe devices may renumber the slots, so check the paths before running disko, which wipes whatever they point to.
-disko's `format` mode partitions and formats only the new SSD, since it leaves existing partition tables, file systems, and pools alone.
-Replace the missing mirror half with the new partition and reinstall the bootloader into both ESPs:
+disko's `format` mode partitions and formats only the new SSD, asking for the LUKS passphrase, since it leaves existing partition tables, file systems, and pools alone.
+Replace the missing mirror half with the opened LUKS device, enroll the TPM for it, and reinstall the bootloader into both ESPs:
 
 ```bash
 sudo nix run github:nix-community/disko/latest -- --mode format --flake .#pythia
-sudo zpool replace zroot <missing-vdev> /dev/disk/by-partlabel/disk-b-zfs
+sudo zpool replace zroot <missing-vdev> /dev/mapper/crypt-b
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/disk-b-luks
 sudo mount /boot-fallback && sudo nixos-rebuild boot --install-bootloader
 ```
 
-Use `disk-a-zfs` and `/boot` if the first SSD failed, and take `<missing-vdev>` from `zpool status`.
+Use `crypt-a`, `disk-a-luks`, and `/boot` if the first SSD failed, and take `<missing-vdev>` from `zpool status`.
 
 ### Certificate
 
