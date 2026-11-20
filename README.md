@@ -249,9 +249,8 @@ Enter it on the console, locally or through the BMC's remote KVM.
 Enroll the TPM for both devices after the first boot, and again with `--wipe-slot=tpm2` after the TPM was cleared:
 
 ```bash
-for device in /dev/disk/by-partlabel/disk-{a,b}-luks; do
-  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 "$device"
-done
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/disk-a-luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/disk-b-luks
 ```
 
 ### Installation
@@ -271,7 +270,10 @@ Then partition, format, and install, entering the LUKS passphrase when asked:
 ```bash
 sudo nix run github:nix-community/disko/latest -- --mode destroy,format,mount --flake github:dfki-ebls/infra#pythia
 sudo nixos-install --flake github:dfki-ebls/infra#pythia --no-root-passwd
+sudo nix run github:nix-community/disko/latest -- --mode unmount --flake github:dfki-ebls/infra#pythia
 ```
+
+The `unmount` mode also exports the pool, which the installer imported under its own host ID, so that the first boot does not refuse to import it.
 
 The first boot asks for the passphrase, afterwards enroll the TPM as described in [TPM](#tpm).
 
