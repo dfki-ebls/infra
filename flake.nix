@@ -53,7 +53,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     bearchat = {
-      url = "github:mirkolenz/bearchat";
+      url = "github:mirkolenz/bearchat/v1";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         systems.follows = "systems";
