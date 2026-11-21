@@ -15,6 +15,14 @@
     settings = {
       sandbox = true;
       allowed-users = [ "@wheel" ];
+      extra-trusted-substituters = [
+        "https://dfki-ebls.cachix.org"
+        "https://mirkolenz.cachix.org"
+      ];
+      extra-trusted-public-keys = [
+        "dfki-ebls.cachix.org-1:hImWYLrtbzgibnK8e09XXT2EID923m6D08fHmASB/kE="
+        "mirkolenz.cachix.org-1:R0dgCJ93t33K/gncNbKgUdJzwgsYVXeExRsZNz5jpho="
+      ];
       experimental-features = [
         "flakes"
         "nix-command"

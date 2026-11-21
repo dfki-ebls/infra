@@ -1,4 +1,8 @@
 {
+  nixConfig = {
+    extra-substituters = [ "https://dfki-ebls.cachix.org" ];
+  };
+
   inputs = {
     nixpkgs.url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst";
     systems.url = "github:nix-systems/default";
