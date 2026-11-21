@@ -15,7 +15,6 @@
     settings = {
       sandbox = true;
       allowed-users = [ "@wheel" ];
-      trusted-users = [ "@wheel" ];
       experimental-features = [
         "flakes"
         "nix-command"
