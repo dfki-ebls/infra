@@ -83,6 +83,14 @@ let
     tls ${lib.concatMapStringsSep " " (name: "{$CREDENTIALS_DIRECTORY}/${name}") certificateCredentials}
   '';
 
+  # Serves the vhosts as subdomains of localhost over plain HTTP.
+  localhost = {
+    rootDomain = "localhost";
+    enableGeoblocking = false;
+    enableVpnAllowlist = false;
+    enableCertificates = false;
+  };
+
   # Curated honeypot paths we never serve.
   scannerHoneypots = ''
     @scanner path /wp-admin* /wp-login* /wp-content* /xmlrpc.php /phpmyadmin* /pma* /.aws/* /.ssh/* /administrator /admin.php /shell.php
@@ -176,6 +184,7 @@ in
         default = true;
       };
       installedCertificates = lib.mkEnableOption "serving the installed certificate files `caddy.tls.cert` and `caddy.tls.key` from the credential store instead of ACME certificates";
+      loopbackOnly = lib.mkEnableOption "serving the vhosts below localhost over plain HTTP on loopback only, such as for testing through SSH port forwarding";
     };
 
     services.caddy.virtualHosts = lib.mkOption {
@@ -184,6 +193,8 @@ in
   };
 
   config = lib.mkIf config.services.caddy.enable {
+    custom = lib.mkIf cfg.loopbackOnly localhost;
+
     # Every vhost serves the installed certificate, so without it Caddy is
     # skipped rather than failing to load or falling back to ACME.
     systemd.services.caddy = lib.mkIf installedCertificates {
@@ -195,11 +206,13 @@ in
 
     services.caddy = {
       package = pkgs.caddy-custom;
-      openFirewall = true;
+      openFirewall = !cfg.loopbackOnly;
       email = lib.mkIf (!installedCertificates) config.custom.admin.mail;
       enableReload = false; # requires admin api
       globalConfig = lib.mkMerge [
         (lib.mkIf installedCertificates "auto_https disable_certs")
+        (lib.mkIf (!cfg.enableCertificates) "auto_https off")
+        (lib.mkIf cfg.loopbackOnly "default_bind 127.0.0.1 [::1]")
         ''
           admin off
           persist_config off
@@ -220,19 +233,12 @@ in
       ];
     };
 
-    # Serves the vhosts as subdomains of localhost over HTTP on the host's port 80.
+    # Serves the localhost vhosts on the host's port 80.
     virtualisation.vmVariant = {
-      custom = {
-        rootDomain = "localhost";
-        enableGeoblocking = false;
-        enableVpnAllowlist = false;
-        enableCertificates = false;
+      # Loopback only would hide Caddy from the port forward.
+      custom = localhost // {
+        loopbackOnly = lib.mkForce false;
       };
-      services.caddy.globalConfig = ''
-        auto_https off
-      '';
-      # glibc needs resolved for wildcard localhost names inside the guest.
-      services.resolved.enable = true;
       virtualisation.forwardPorts = [
         {
           from = "host";
