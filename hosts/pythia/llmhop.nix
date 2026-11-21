@@ -9,6 +9,11 @@
         port = null;
         socketGroup = config.services.caddy.group;
       };
+      # Admins reach it without a token, such as through an SSH port forward.
+      listen.wheel = {
+        socketGroup = "wheel";
+        trusted = true;
+      };
       # Every credential with this prefix is a client token, see README.
       settings.authTokenCredentials = "llmhop.token.*";
     };

@@ -309,6 +309,7 @@ sudo systemctl restart caddy
 
 Caddy serves llmhop's models over TLS at `https://pythia.dfki.uni-trier.de` (`hosts/pythia/llmhop.nix`), proxying to llmhop's unix socket, and each client authenticates with its own bearer token.
 The models are `qwen3.8-27b` for chat, `qwen3-embedding-4b` for embeddings of up to 16K tokens, whose queries take the prefix `Instruct: <task>\nQuery:` while documents take none, and `lightonocr-3-4b` for OCR, which turns one page image per chat completion into Markdown, with layout boxes if the text is `grounding`.
+For debugging, admins forward llmhop's trusted socket with `ssh -L 8080:/run/llmhop/wheel.sock pythia`, then call `http://localhost:8080` without a token as the client `wheel`, also from BearChat's dev server with `BEARCHAT_PROXY=http://localhost:8080 npm run dev`.
 `qwen3.6-35b-a3b` serves many concurrent short tasks such as image captions, summaries and follow-up questions, without thinking unless a request sets `chat_template_kwargs.enable_thinking`.
 `d3` answers typed questions (`choice`, `noul`, `score`) about a state with text, images or videos on `/v1/systemone`, returning a probability for every option, see [vLLM's docs](https://docs.vllm.ai/en/latest/models/structured_decisions_models/).
 Both Qwen models answer on that endpoint too, reading each option's label from their first token.
