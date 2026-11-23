@@ -3,11 +3,18 @@
   pkgs,
   mkUvEnv,
   mkCudaHome,
+  fetchpatch2,
   ffmpeg_8-headless,
   rdma-core,
   onetbb,
 }:
 let
+  # https://github.com/vllm-project/vllm/pull/64550
+  watermarkKeyFile = fetchpatch2 {
+    url = "https://github.com/vllm-project/vllm/commit/059fb66bdc0e25d086ff517f5a9c5e72825c13dd.patch?full_index=1";
+    includes = [ "vllm/config/watermarking.py" ];
+    hash = "sha256-f/VdbGCT26moEdWVH+YP1+MXszjwFHaeRZnxqhTVPnU=";
+  };
   env = mkUvEnv {
     name = "vllm-env";
     workspaceRoot = ./.;
@@ -21,6 +28,18 @@ let
       "*/torchcodec/libtorchcodec_*[!8].so"
       # nvshmem plugins for the launchers and fabrics of multi-node jobs.
       "*/nvidia/nvshmem/lib/nvshmem_*.so.3"
+    ];
+    overlays = [
+      # Backports `key_file` of `WatermarkConfig`, which llmhop passes.
+      # Wheels are installed without unpacking, so `patches` cannot apply.
+      # Drop with vLLM 0.35.
+      (final: prev: {
+        vllm = prev.vllm.overrideAttrs (old: {
+          postInstall = (old.postInstall or "") + ''
+            patch --forward -p1 -d "$out/${final.python.sitePackages}" < ${watermarkKeyFile}
+          '';
+        });
+      })
     ];
   };
   # `CUDA_HOME` for the JIT compilers, which otherwise look for `which nvcc` and
