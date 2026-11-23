@@ -198,6 +198,8 @@ lib.mkIf config.custom.enableNvidia {
           # Requests may still opt into thinking, which the parser separates.
           reasoning-parser = "qwen3";
           default-chat-template-kwargs.enable_thinking = false;
+          enable-auto-tool-choice = true;
+          tool-call-parser = "qwen3_xml";
           # No MTP, since each draft holds another linear-attention state per
           # sequence, which would halve how many run at once.
           # Upstream's sampling for non-thinking general tasks.
