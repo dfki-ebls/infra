@@ -33,6 +33,8 @@ lib.mkIf config.custom.enableNvidia {
         # `gpu-memory-utilization` stays unset.
         kv-cache-dtype = "nvfp4";
         kv-offloading-size = 16; # GiB
+        # The native 256K exceeds the KV cache left on the card, which fits about 197K.
+        max-model-len = "192K";
         max-num-batched-tokens = 4096;
         max-num-seqs = 4;
         reasoning-parser = "qwen3";
