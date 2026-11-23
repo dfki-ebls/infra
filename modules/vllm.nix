@@ -31,7 +31,7 @@ lib.mkIf cfg.enable {
     fetch.hfTokenCredential = "huggingface.token";
   };
 
-  # Members of `wheel` read the metrics with `llmhopctl top`, without root.
+  # Members of `wheel` read the metrics with `llmhop top`, without root.
   services.llmhop.gateway.listen.wheel = {
     socketGroup = "wheel";
     metrics = true;

@@ -225,7 +225,7 @@ Rotate the secret from the same admin UI screen; nothing in the Nix store needs 
 
 ## pythia
 
-raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with a key from `llmhopctl key create hivegent`.
+raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with a key from `llmhop key create hivegent`.
 
 ASUS Pro WS WRX90E-SAGE SE with an AMD Threadripper PRO 9975WX, 256 GB ECC RAM, two RTX PRO 6000 Blackwell Workstation Edition cards for Qwen3.8 and an RTX PRO 6000 Blackwell Max-Q for the embedding, OCR, auxiliary and decision models.
 
@@ -315,15 +315,15 @@ The models are `qwen3.8-27b` for chat, `qwen3-embedding-4b` for embeddings of up
 `d3` answers typed questions (`choice`, `noul`, `score`) about a state with text, images or videos on `/v1/systemone`, returning a probability for every option, see [vLLM's docs](https://docs.vllm.ai/en/latest/models/structured_decisions_models/).
 Both Qwen models answer on that endpoint too, reading each option's label from their first token.
 Docling's `lightonocr3_4b` preset reaches it through its API engine with the `model` param set to `lightonocr-3-4b`.
-Every credential named `llmhop.api-key.<client>` in `/etc/credstore` is a client key, which llmhop reads at startup and on `systemctl reload llmhop`, without a restart.
-`llmhopctl` manages the keys, reloading llmhop and printing new ones, which expire with `--expires 30d`:
+Every credential named `llmhop.api-key.<client>` in `/etc/credstore` is a client, holding the SHA-256 hash of its key, which llmhop reads at startup and on `systemctl reload llmhop`, without a restart.
+`llmhop key` manages them, reloading llmhop and printing new keys, which expire with `--expires 30d`:
 
 ```bash
-sudo llmhopctl key list
-sudo llmhopctl key create <client>
-sudo llmhopctl key update <client>
-sudo llmhopctl key rotate <client>
-sudo llmhopctl key revoke <client>
+sudo llmhop key list
+sudo llmhop key create <client>
+sudo llmhop key update <client>
+sudo llmhop key rotate <client>
+sudo llmhop key revoke <client>
 ```
 
 If the config fails to load, llmhop keeps the previous one and logs the error.
