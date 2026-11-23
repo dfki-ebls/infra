@@ -32,7 +32,7 @@ let
 
   # Resolved to llmhop's socket through `network.unix_sockets`.
   llmhopUrl = "http://llmhop";
-  llmhopListener = config.services.llmhop.gateway.llmhop.listen.default;
+  llmhopListener = config.services.llmhop.gateway.listen.default;
   inherit (config.services.llmhop.vllm) detectors;
   llmModel = "qwen3.8-27b";
   withTransparency = lib.mkIf (detectors ? watermark);
@@ -120,7 +120,7 @@ in
       };
 
       transparency = withTransparency {
-        detector_url = "${llmhopUrl}/route/${detectors.watermark.name}/detect";
+        detector_url = "${llmhopUrl}/llmhop/proxy/${detectors.watermark.name}/detect";
         report_issuer = hivegentUrl;
         contact_email = config.custom.admin.mail;
       };

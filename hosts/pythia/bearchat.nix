@@ -7,9 +7,9 @@
   services.bearchat = {
     enable = true;
     virtualHost = "root";
-    # The root path would shadow llmhop's routes outside `/v1`.
+    # The root path would shadow llmhop's routes under `/v1` and `/llmhop`.
     path = "/chat";
-    upstream = "unix/${config.services.llmhop.gateway.llmhop.listen.default.socket}";
+    upstream = "unix/${config.services.llmhop.gateway.listen.default.socket}";
     settings.locked.model = "qwen3.8-27b";
   };
 }
