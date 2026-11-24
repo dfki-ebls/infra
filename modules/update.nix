@@ -8,8 +8,10 @@
     dates = "04:00";
     allowReboot = true;
     runGarbageCollection = true;
+    # The window check compares strictly, so it has to open before `dates`,
+    # otherwise a run finishing within 04:00 never reboots.
     rebootWindow = {
-      lower = "04:00";
+      lower = "03:00";
       upper = "05:00";
     };
   };
