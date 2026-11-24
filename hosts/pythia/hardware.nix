@@ -18,6 +18,7 @@
   boot.kernelParams = [ "iommu=pt" ];
 
   hardware.enableAllFirmware = true;
+  hardware.cpu.amd.updateMicrocode = true;
 
   # Logs corrected and uncorrected ECC memory errors.
   hardware.rasdaemon.enable = true;
