@@ -369,11 +369,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795449464,
-        "narHash": "sha256-cDLO6uHDjykvo52BVhdqxuiVI53bios1BVEteFXXgeI=",
+        "lastModified": 1795526131,
+        "narHash": "sha256-jbwpgwk3i9ss3IXaqls37cJZhRc+8DE6CKG2ABotwH8=",
         "owner": "mirkolenz",
         "repo": "llmhop",
-        "rev": "c0d4553494fd1651f1adcbdb9569ad0d31513f94",
+        "rev": "2cbe6aca8d5bc70ad8d651fe1096f3d9a050c4fd",
         "type": "github"
       },
       "original": {
