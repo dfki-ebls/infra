@@ -33,11 +33,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795428226,
-        "narHash": "sha256-1DjXLc2VZ/VK3victpqP7EUjFyUcqFQzt3isWLFb5t4=",
+        "lastModified": 1795529316,
+        "narHash": "sha256-MSzw1n1iC1DeQ3NRnACTGncVzXx7xdFvmhp97EbxT7w=",
         "owner": "mirkolenz",
         "repo": "bearchat",
-        "rev": "75836dc33e99e8f8d2d9388fcdbb3a802269080a",
+        "rev": "9308ae76fc9d0494c31f5730653ef37bb4008327",
         "type": "github"
       },
       "original": {
@@ -369,11 +369,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795526131,
-        "narHash": "sha256-jbwpgwk3i9ss3IXaqls37cJZhRc+8DE6CKG2ABotwH8=",
+        "lastModified": 1795527111,
+        "narHash": "sha256-5nhkKI2Qr4UvZuUq7gubOMRb1148kMAMk1gikFEWZbk=",
         "owner": "mirkolenz",
         "repo": "llmhop",
-        "rev": "2cbe6aca8d5bc70ad8d651fe1096f3d9a050c4fd",
+        "rev": "05238d5a787711d3599dd03abb9bcc7be2faedb9",
         "type": "github"
       },
       "original": {
