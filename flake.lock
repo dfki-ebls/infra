@@ -33,11 +33,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795529316,
-        "narHash": "sha256-MSzw1n1iC1DeQ3NRnACTGncVzXx7xdFvmhp97EbxT7w=",
+        "lastModified": 1795597670,
+        "narHash": "sha256-l2Juk3hpob+pVCC8X7AKPn2S3wfWKylsQpfNKq0JJuE=",
         "owner": "mirkolenz",
         "repo": "bearchat",
-        "rev": "9308ae76fc9d0494c31f5730653ef37bb4008327",
+        "rev": "179c36edf928cbcbde448bb94357b79cb3f1d4a6",
         "type": "github"
       },
       "original": {
