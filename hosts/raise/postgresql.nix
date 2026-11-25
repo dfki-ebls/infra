@@ -23,6 +23,8 @@
     enable = true;
     compression = "zstd";
     databases = config.services.postgresql.ensureDatabases;
-    pgdumpOptions = "--clean --if-exists --no-owner --no-acl";
+    # Each dump recreates its database with owners and grants, whose roles
+    # `ensureUsers` provisions, so a restore needs no further steps.
+    pgdumpOptions = "--clean --if-exists --create";
   };
 }
