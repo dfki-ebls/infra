@@ -1,4 +1,9 @@
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  inputs,
+  ...
+}:
 let
   vhost = config.services.caddy.virtualHosts.hivegent;
   hivegentUrl = vhost.url;
@@ -10,33 +15,19 @@ let
   spaClient = "hivegent-spa";
   integrationClient = "hivegent-integration";
 
-  # The module's own header block is deferred and sets `frame-ancestors` as
-  # the whole policy at response time, overriding even the API's strict one.
-  # A deferred header with a matcher sorts outside it and applies last.
-  csp = lib.concatStringsSep "; ";
-  apiCsp = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-  # Enforced for the SPA, closing every channel model output could exfiltrate
-  # through (remote images, fetches, frames). oidc-spa reaches Rauthy for
-  # discovery and tokens and restores sessions in a hidden Rauthy iframe,
-  # previews are blob URLs.
-  spaCsp = csp [
-    "base-uri 'self'"
-    "form-action 'self'"
-    "frame-ancestors 'self'"
-    "connect-src 'self' blob: data: ${origin}"
-    "frame-src 'self' blob: ${origin}"
-    "img-src 'self' blob: data:"
-    "media-src 'self' blob:"
-  ];
-  inherit (config.services.hivegent.caddy) docsPath;
-
-  # Resolved to llmhop's socket through `network.unix_sockets`.
-  llmhopUrl = "http://llmhop";
-  llmhopListener = config.services.llmhop.gateway.listen.default;
-  inherit (config.services.llmhop.vllm) detectors;
-  llmModel = "qwen3.8-27b";
+  # The models and the watermark detector are served by pythia's llmhop, which
+  # authenticates Hivegent with the key of its client `hivegent`, the
+  # credential `hivegent.LLM__PROVIDERS__PYTHIA__API_KEY`, see README.
+  pythia = inputs.self.nixosConfigurations.pythia.config;
+  pythiaUrl = pythia.services.caddy.virtualHosts.root.url;
+  # pythia's public address, which `IPAddressAllow` needs in place of its name.
+  pythiaAddress = "136.199.45.191";
+  inherit (pythia.services.llmhop.vllm) models detectors;
+  chatModel = "qwen3.8-27b";
+  auxModel = "qwen3.6-35b-a3b";
+  # The model's own limit, since it rejects a request over it.
+  maxImages = model: models.${model}.settings.limit-mm-per-prompt.image.count;
   withTransparency = lib.mkIf (detectors ? watermark);
-  withLlmhop = lib.mkIf config.services.llmhop.gateway.active;
   # 32 random bytes in hex.
   secret = "od -An -N32 -tx1 /dev/urandom | tr -d ' \\n'";
 
@@ -50,17 +41,9 @@ in
     postgresql.createLocally = true;
     searxng.createLocally = config.services.searx.enable;
 
-    # Every endpoint is local (Rauthy via split-horizon, llmhop and Postgres
-    # via unix sockets), so confine the backend to loopback.
-    allowedAddresses = [ ];
-
-    # Device placement for every torch / onnxruntime model (dense embeddings,
-    # the model-based chunkers, docling) is decided centrally by the process
-    # environment rather than per-library config — the backend uses `auto`
-    # detection everywhere. Hide the GPU for now so the whole VRAM budget
-    # stays with vLLM; `auto` then resolves to CPU for all of them. Drop this
-    # together with `PrivateDevices` below once the model moved to pythia.
-    environment.CUDA_VISIBLE_DEVICES = "";
+    # Rauthy is reached via split-horizon and Postgres via its unix socket, so
+    # pythia is the only endpoint beyond loopback.
+    allowedAddresses = [ pythiaAddress ];
 
     settings = {
       auth = {
@@ -99,28 +82,41 @@ in
       };
 
       llm = {
-        model = llmModel;
-        base_url = "${llmhopUrl}/v1";
-        inference_provider = "vllm";
-      };
-
-      # The model's own limit, since it rejects a request over it.
-      multimodal = withLlmhop {
-        max_images =
-          config.services.llmhop.vllm.models.${llmModel}.settings.limit-mm-per-prompt.image.count;
+        default = chatModel;
+        aux = auxModel;
+        providers.pythia = {
+          base_url = "${pythiaUrl}/v1";
+          inference_provider = "vllm";
+        };
+        models = {
+          ${chatModel} = {
+            provider = "pythia";
+            model = chatModel;
+            vision = true;
+            max_images = maxImages chatModel;
+            # Qwen3.8 implements `xhigh` in place of `high`.
+            reasoning_overrides.high = "xhigh";
+          };
+          # Only fills the aux role, with reasoning off.
+          ${auxModel} = {
+            provider = "pythia";
+            model = auxModel;
+            vision = true;
+            max_images = maxImages auxModel;
+            chat = false;
+          };
+        };
       };
 
       # Lets web_fetch open any public page the user or a search named.
       security = withWeb { web_urls.allow_hosts = [ "*" ]; };
 
-      network = {
-        # Advertised in web_fetch's User-Agent for traffic questions.
-        contact_email = config.custom.admin.mail;
-        unix_sockets = withLlmhop { llmhop = llmhopListener.socket; };
-      };
+      # Advertised in web_fetch's User-Agent for traffic questions.
+      network.contact_email = config.custom.admin.mail;
 
       transparency = withTransparency {
-        detector_url = "${llmhopUrl}/llmhop/proxy/${detectors.watermark.name}/detect";
+        endpoint = "pythia";
+        detector_path = "/llmhop/proxy/${detectors.watermark.name}/detect";
         report_issuer = hivegentUrl;
         contact_email = config.custom.admin.mail;
       };
@@ -130,24 +126,9 @@ in
       enable = true;
       hostName = vhost.address;
       hsts = config.custom.enableCertificates;
-      # The SPA reads its OIDC config from the backend's `/api/v1/config`
-      # (`settings.auth` above), so there is no per-deployment frontend build.
-      # Site-wide hardening the reusable module intentionally leaves out.
-      extraConfig = ''
-        @csp_api path /api/*
-        header @csp_api {
-          defer
-          Content-Security-Policy "${apiCsp}"
-        }
-
-        # The handbook is mdbook output with inline scripts, so it keeps the
-        # module's policy.
-        @csp_spa not path /api/* ${docsPath} ${docsPath}/*
-        header @csp_spa {
-          defer
-          Content-Security-Policy "${spaCsp}"
-        }
-      '';
+      # The SPA's Content-Security-Policy lets it reach and frame Rauthy for
+      # the sign-in and session restoration.
+      idpOrigins = [ origin ];
     };
   };
 
@@ -229,12 +210,5 @@ in
       "caddy.service"
       "rauthy.service"
     ];
-
-    serviceConfig = {
-      # Grants the dynamic user access to llmhop's socket.
-      SupplementaryGroups = withLlmhop [ llmhopListener.socketGroup ];
-      # The module exposes the host devices for CUDA, which is hidden above.
-      PrivateDevices = lib.mkForce true;
-    };
   };
 }
