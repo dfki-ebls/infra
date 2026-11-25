@@ -9,6 +9,7 @@
     virtualHost = "root";
     # The root path would shadow llmhop's routes under `/v1` and `/llmhop`.
     path = "/chat";
+    redirectRoot = true;
     upstream = "unix/${config.services.llmhop.gateway.listen.default.socket}";
     settings.locked.model = "qwen3.8-27b";
   };
