@@ -69,8 +69,8 @@ Rauthy sends mail through the uni Trier relay (`mail.wi2.uni-trier.de:465`, impl
 Provision it on the server, then restart:
 
 ```bash
-printf 'SMTP_PASSWORD=%s\n' '<secret>' > /etc/rauthy/rauthy.env
-systemctl restart rauthy
+sudo sh -c 'umask 077; printf "SMTP_PASSWORD=%s\n" "$(systemd-ask-password -n "SMTP password:")" > /etc/rauthy/rauthy.env'
+sudo systemctl restart rauthy
 ```
 
 ### Hivegent
@@ -94,8 +94,8 @@ Create its llmhop key on pythia, then store it on raise, where it also authentic
 # on pythia
 sudo llmhop key create hivegent
 # on raise
-(umask 077; systemd-ask-password -n "pythia key:" > /etc/credstore/hivegent.LLM__PROVIDERS__PYTHIA__API_KEY)
-systemctl restart hivegent
+sudo sh -c 'umask 077; systemd-ask-password -n "pythia key:" > /etc/credstore/hivegent.LLM__PROVIDERS__PYTHIA__API_KEY'
+sudo systemctl restart hivegent
 ```
 
 The backend may reach no address but loopback and pythia's (`allowedAddresses`), so a new address of pythia needs updating there.
@@ -103,11 +103,12 @@ The backend may reach no address but loopback and pythia's (`allowedAddresses`),
 Runtime secrets are systemd credentials named after their component, and the unit imports every `hivegent.*` credential from the system credential store.
 Hivegent maps `hivegent.<NAME>` to the setting of the variable `HIVEGENT_<NAME>`, so any setting can be a credential, while llmhop names its credentials after their `${cred:…}` references.
 Secrets listed in `custom.credstore` (`options/credstore.nix`) are generated if missing, before the first service importing them starts.
-Store any other one as a plain file in `/etc/credstore`, which systemd keeps readable by root only, and restart:
+Store any other one as a plain file in `/etc/credstore`, which systemd keeps readable by root only, and restart.
+Run it through a root shell, since the invoking shell, not `sudo`, opens a redirect:
 
 ```bash
-(umask 077; systemd-ask-password -n "MCP client secret:" > /etc/credstore/hivegent.MCP__CLIENT_SECRET)
-systemctl restart hivegent
+sudo sh -c 'umask 077; systemd-ask-password -n "MCP client secret:" > /etc/credstore/hivegent.MCP__CLIENT_SECRET'
+sudo systemctl restart hivegent
 ```
 
 List the credentials the unit receives, without printing their values:
@@ -244,7 +245,11 @@ sudo systemctl start hivegent
 
 Copy the archive off the host, since it holds every secret, among them Rauthy's encryption key and the key of the transparency reports.
 `postgresqlBackup` also runs nightly and keeps the previous dump as `<db>.prev.sql.zstd`.
-To restore, stop the services, extract the archive to `/`, and load each dump into its database as `postgres`, such as `zstdcat /var/backup/postgresql/hivegent.sql.zstd | sudo -u postgres psql hivegent`.
+To restore, stop the services and extract the archive to `/`, then load each dump, which drops and recreates its database with owners and grants:
+
+```bash
+sudo -u postgres sh -c 'zstdcat /var/backup/postgresql/hivegent.sql.zstd | psql -v ON_ERROR_STOP=1'
+```
 
 ## pythia
 
