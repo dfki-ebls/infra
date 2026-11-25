@@ -223,6 +223,23 @@ async def get_workspace_tree() -> object:
 
 Rotate the secret from the same admin UI screen; nothing in the Nix store needs to change.
 
+### Backup
+
+Everything that cannot be regenerated lives in Postgres, the state directories of the dynamic users (`/var/lib/private`), and the server-local config in `/etc`, while model caches and Caddy's ACME certificates are fetched again.
+Stop Hivegent so that its database and files match, dump the databases, archive everything, then start it again:
+
+```bash
+sudo systemctl stop hivegent
+sudo systemctl start postgresqlBackup-{hivegent,rauthy}
+sudo tar --zstd -cpf /root/raise.tar.zst --exclude=.cache --exclude=.transient -C / \
+  var/backup/postgresql var/lib/private etc/credstore etc/rauthy etc/caddy/vpn.d
+sudo systemctl start hivegent
+```
+
+Copy the archive off the host, since it holds every secret, among them Rauthy's encryption key and the key of the transparency reports.
+`postgresqlBackup` also runs nightly and keeps the previous dump as `<db>.prev.sql.zstd`.
+To restore, stop the services, extract the archive to `/`, and load each dump into its database as `postgres`, such as `zstdcat /var/backup/postgresql/hivegent.sql.zstd | sudo -u postgres psql hivegent`.
+
 ## pythia
 
 raise keeps serving its own model on its RTX PRO 4500 until Hivegent moves to pythia, which then needs pointing at `https://pythia.dfki.uni-trier.de` with a key from `llmhop key create hivegent`.
